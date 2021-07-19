@@ -14,7 +14,7 @@ General aims:
 
 Dataset details: 
 
-Columns C to Q = these are the proxy or biomarkers, i.e. the bacterial lipid. The "." in the headers of columns D, F, H, J,L,N is a substitute for the
+Columns C to Q = these are the proxy or biomarkers, i.e. the bacterial lipid. They are shown as %. The "." in the headers of columns D, F, H, J,L,N is a substitute for the
 real nomenclature of the lipids which should be for example IIIa', IIIb' etc. It's to make it R friendly.
 
 Columns R and S = Latitude and Longitude
