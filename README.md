@@ -31,7 +31,7 @@ Columns AN to BD = average monthly, annual and seasonal air temperature in oC
 
 Column BE = Soil pH. This is the average pH of the catchment soils of each lake
 
-BF = Water Temperature in oC
+Column BF = Water Temperature in oC
 
 Column BG = Surface (i.e. upper 1 meter) Water Temperature in oC. 
 
