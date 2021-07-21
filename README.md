@@ -25,7 +25,7 @@ Column u = Lake area in Km2
 
 Column V = Altitude in meters (m)
 
-Columns W to AM = monthly, annual and seasonal precipitations in millimeters (mm)
+Columns W to AM = monthly, annual and seasonal precipitation in millimeters (mm)
 
 Columns AN to BD = average monthly, annual and seasonal air temperature in oC
 
