@@ -1,4 +1,4 @@
-Background:
+Background
 I have taken lake sediment samples from ~90 lakes in southern Saskatchewan, Canada. 
 From the sediment samples I have extracted organic material (lipids from bacteria called GDGTs). Each lipid has a unique structure which is an adaptation 
 to warmer/cooler temperature and changes in the pH of the soil where these bacteria live. By using statistical modelling, we can quantify these changes 
