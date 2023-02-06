@@ -1,0 +1,31 @@
+model {
+
+  for (i in 1:n_dat) {
+    for (j in 1:n_bac) {
+      bac[i,j] ~ dnegbin(mu[i,j], r)
+      logit(mu[i,j]) = alpha[j] + beta[1,j]*log_salinity[i] + beta[2,j]*WT[i] +
+                        beta[3,j]*MAT[i] + beta[4,j]*log_lakeArea[i] + beta[5,j]*log_WpH[i]
+    } 
+    log_salinity[i] ~ dlnorm(mu.x, p.x)
+  }
+
+  ## priors
+
+  for (i in 1:n_bac) {
+    alpha[i] ~ dnorm(0, 0.001)
+    for (k in 1:5) {
+      beta[k,i] ~ dnorm(0, 0.001)
+    }
+  }
+
+  r ~ dgamma(0.1, 0.1)
+  mu.x ~ dunif(-10, 10)
+  p.x = 1/pow(sd.x, 2)
+  sd.x ~ dunif(0, 10)
+
+#  ## predictions
+#  for (j in 1:n_dat) {
+#    pred[j] ~ dpois(mu[j])
+#  }
+}
+
