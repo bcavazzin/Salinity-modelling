@@ -1,0 +1,17 @@
+model {
+
+  for (i in 1:n_dat) {
+    bac[i] ~ dpois(mu[i])
+    log(mu[i]) = alpha + beta*envir[i]
+    envir[i] ~ dlnorm(mu.x, p.x)
+  }
+
+  ## priors
+
+  alpha ~ dnorm(0, 0.001)
+  beta ~ dnorm(0, 0.001)
+
+  mu.x ~ dunif(-10, 10)
+  p.x = 1/pow(sd.x, 2)
+  sd.x ~ dunif(0, 10)
+}
