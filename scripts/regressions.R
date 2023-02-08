@@ -2,14 +2,14 @@
 # regressions
 
 library(dplyr)
-library("rstan")
-library("rstanarm")
-library("bayesplot")
-library("ggplot2")
-library("broom")
+library(rstan)
+library(rstanarm)
+library(bayesplot)
+library(ggplot2)
+library(broom)
 
 
-dat_total <- readr::read_csv("Dataset_concentration.csv")
+dat_total <- readr::read_csv("raw data/Dataset_concentration.csv")
 
 # select bacteria
 var_names <- c("Lat","Long","Sample Depth","Lake area","MAT","Soi_pH","WT","Surface WT","Wsalinity","WpH")   

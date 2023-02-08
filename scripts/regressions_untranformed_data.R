@@ -9,7 +9,7 @@ library(ggplot2)
 library(broom)
 
 
-dat_total <- readr::read_csv("Dat_untransformed.csv")
+dat_total <- readr::read_csv("raw data/data_signal_intensity.csv")
 
 # select bacteria
 var_names <- c("Lat","Long","Sample Depth","Lake area","MAT","Soi_pH","WT",

@@ -16,8 +16,8 @@ library(bayesplot)
 ##TODO
 # lake random effect?
 
-
-dat <- readr::read_csv("Dataset_concentration.csv")
+# mg/g sediment
+dat <- readr::read_csv("raw data/Dataset_concentration.csv")
 
 # clean data
 
@@ -25,7 +25,8 @@ dat <- readr::read_csv("Dataset_concentration.csv")
 # names(dat) <- gsub("\\.", "", names(dat))
 
 bac_names <- c("IIIa","IIIa.","IIIb","IIIb.","IIIc","IIIc.","IIa",
-               "IIa.","IIb","IIb.","IIc","IIc.","Ia","Ib","Ic")
+               "IIa.","IIb","IIb.","IIc","IIc.",
+               "Ia","Ib","Ic")
 
 bac_names_log <- paste0(bac_names, "_log")
 
@@ -43,7 +44,7 @@ dat <-
 
 # jags set-up
 
-filein <- "model_missing_lm.txt"
+filein <- "BUGS/model_missing_lm.txt"
 params <- c("mu", "alpha", "beta", "missing")#, "pred")
 
 n.iter <- 20000
@@ -85,5 +86,5 @@ mcmc_areas(x, pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
 
 
-save(output, file = "BUGS_output.RData")
+save(output, file = "output_data/BUGS_output.RData")
 

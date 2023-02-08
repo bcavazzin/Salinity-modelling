@@ -14,7 +14,10 @@ library(bayesplot)
 
 # dataset ####
 
-dat <- read.csv("Dataset_Bianca.csv", check.names = FALSE, header = TRUE)
+# counts
+# including 0s
+##TODO: is this the right data?
+dat <- read.csv("raw data/dataset_proportions.csv", check.names = FALSE, header = TRUE)
 
 dat$log_salinity <- log(dat$Wsalinity)
 dat$log_WpH <- log(dat$WpH)
@@ -23,8 +26,9 @@ dat <- dat[dat$Wsalinity != 0, ]
 dat <- dat[dat$`Lake area` != 0, ]
 dat$Wsalinity <- ifelse(dat$Wsalinity <= 0, 0.0001, dat$Wsalinity)
 
-bac_names <- c("IIIa","IIIa.","IIIb","IIIb.","IIIc","IIIc.","IIa","IIa.",
-               "IIb","IIb.","IIc","IIc.","Ia","Ib","Ic")
+bac_names <- c("IIIa","IIIa.","IIIb","IIIb.","IIIc","IIIc.",
+               "IIa","IIa.", "IIb","IIb.","IIc","IIc.",
+               "Ia","Ib","Ic")
 n_bac <- length(bac_names)
 
 # # standardize covariates
@@ -67,7 +71,7 @@ dataJags <-
        log_lakeArea = c(dat$log_lakeArea, NA),
        log_WpH = c(dat$log_WpH, NA),
        n_dat = nrow(dat) + 1)
-filein <- "model_missing.txt"
+filein <- "BUGS/model_missing.txt"
 
 res_bugs <-
   jags(data = dataJags,
