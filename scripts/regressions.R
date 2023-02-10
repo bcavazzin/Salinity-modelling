@@ -1,15 +1,18 @@
 
 # regressions
+# bacteria measurement against salinity 
 
 library(dplyr)
+library(broom)
 library(rstan)
 library(rstanarm)
+library(brms)
 library(bayesplot)
 library(ggplot2)
-library(broom)
 
 
-dat_total <- readr::read_csv("raw data/Dataset_concentration.csv")
+# dat_total <- readr::read_csv("raw data/Dataset_concentration.csv")
+dat_total <- readr::read_csv("raw data/data_signal_intensity.csv")
 
 # select bacteria
 var_names <- c("Lat","Long","Sample Depth","Lake area","MAT","Soi_pH","WT","Surface WT","Wsalinity","WpH")   
@@ -18,8 +21,11 @@ bac_name <- "Ia"
 
 dat <- dat_total[, c(var_names, bac_name)]
 
-dat <- rename(dat, "bac" = bac_name) |> 
+dat <-
+  rename(dat, "bac" = bac_name) |> 
   mutate(bac = as.integer(round(bac, 0)))
+
+dat <- dat[dat$bac < 200000, ]
 
 # dat$Ia <- floor(dat$Ia)  # for poisson model
 
@@ -27,20 +33,22 @@ dat$log_bac <- log(dat$bac)
 dat$log_salinity <- log(dat$Wsalinity)
 dat$log_WpH <- log(dat$WpH)
 dat$log_lakeArea <- log(dat$`Lake area`)
+
 dat <- dat[dat$Wsalinity != 0, ]
-dat <- dat[dat$bac != 0, ]
 dat <- dat[dat$`Lake area` != 0, ]
+dat <- dat[dat$bac != 0, ]
 
 # remove outliers
 # dat <- dat[!(dat$log_salinity > 2.5 & dat$log_bac > 3.8), ]
 # dat <- dat[dat$bac < 400, ]
 
 # change point variable
-dat$log_salinity_star <- (dat$log_salinity > 1) * (dat$log_salinity - 1)  
+# split data by how much greater than 1
+dat$log_salinity_star <- (dat$log_salinity > 1) * (dat$log_salinity - 1)
 
 # standardize covariates
-dat <- 
-  mutate(dat, across(Lat:WpH, ~ (.x - mean(.x))/sd(.x)))
+# dat <- 
+#   mutate(dat, across(Lat:WpH, ~ (.x - mean(.x))/sd(.x)))
 
 
 ############################
@@ -58,9 +66,11 @@ y <- dat$bac
 lm_null <- stan_glm(log_bac ~ 1,
                     family = "gaussian",
                     data = dat)
+
 lm11 <- stan_glm(log_bac ~ log_salinity,
                  family = "gaussian",
                  data = dat)
+
 lm22 <- stan_glm(log_bac ~ log_salinity + WT + MAT + log_lakeArea + log_WpH,
                  family = "gaussian",
                  data = dat)
@@ -93,13 +103,13 @@ epred_lm22 <- posterior_epred(lm22)
 color_scheme_set("brightblue")
 # ppc_dens_overlay(y, yrep[1:5, ])
 # ppc_dens_overlay(y, yrep_null[1:5, ])
-ppc_dens_overlay(dat$log_bac, yrep_lm11[1:5, ])
-ppc_dens_overlay(dat$log_bac, yrep_lm_null[1:5, ])
+ppc_dens_overlay(dat$log_bac, yrep_lm11[1:50, ])
+ppc_dens_overlay(dat$log_bac, yrep_lm_null[1:50, ])
 
 ppc_dens_overlay(dat$bac, exp(yrep_lm_cp[1:100, ])) + xlim(0, 500)
 
 # ppc_dens_overlay(dat$Ia, exp(yrep_lm2[1:100, ])) + xlim(0, 500)
-ppc_dens_overlay(dat$bac, exp(yrep_lm11[1:100, ])) + xlim(0, 500) + ylim(0,0.04)
+ppc_dens_overlay(dat$bac, exp(yrep_lm11[1:100, ])) #+ xlim(0, 500) + ylim(0,0.04)
 ppc_dens_overlay(dat$bac, exp(yrep_lm22[1:100, ])) + xlim(0, 500) + ylim(0,0.04)
 ppc_dens_overlay(dat$bac, exp(yrep_lm_null[1:100, ])) + xlim(0, 500) + ylim(0,0.04)
 
@@ -135,8 +145,6 @@ segments(x0 =  1, y0 = coef(freq_lm)[1] + coef(freq_lm)[2],
 
 ###################
 # poisson fits
-
-library(brms)
 
 fit1 <- brm(bac ~ log_salinity,
             family = "poisson",
@@ -175,7 +183,7 @@ epred_nb0 <- posterior_epred(fit_nb0)
 epred_fit2 <- posterior_epred(fit2)
 epred_fit3 <- posterior_epred(fit3)
 
-ppc_dens_overlay(dat$bac, yrep_fit2[1:100, ]) + xlim(0, 800)
+ppc_dens_overlay(dat$bac, yrep_fit2[1:100, ])
 ppc_dens_overlay(dat$bac, yrep_fit3[1:100, ])
 ppc_dens_overlay(dat$bac, yrep_nb0[1:100, ])
 
