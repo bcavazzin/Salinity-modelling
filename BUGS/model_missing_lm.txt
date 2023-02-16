@@ -1,11 +1,10 @@
 model {
 
   for (i in 1:n_dat) {
-    for (j in 1:n_bac) {
-      bac[i,j] ~ dnorm(mu[i,j], tau)
-      mu[i,j] = alpha[j] + beta[j]*envir[i]
-    } 
-    envir[i] ~ dnorm(mu.x, p.x)
+    bac[bac_id[i]] ~ dnorm(mu[bac_id[i]], tau)
+    mu[bac_id[i]] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[i]
+      
+    log_salinity[i] ~ dnorm(mu.x, p.x)
   }
 
   ## priors
@@ -14,13 +13,21 @@ model {
   sd.tau ~ dunif(0, 10)
  
   for (i in 1:n_bac) {
-    alpha[i] ~ dnorm(0, 0.001)
-    beta[i] ~ dnorm(0, 0.001)
+    alpha[i] ~ dnorm(mu_alpha, tau_alpha)
+    beta[i] ~ dnorm(mu_beta, tau_beta)
   }
+
+  # random effects
+  mu_alpha ~ dunif(-10, 10)
+  mu_beta ~ dunif(-10, 10)
+  tau_alpha = 1/pow(sd_alpha, 2)
+  sd_alpha ~ dunif(0, 10)
+  tau_beta = 1/pow(sd_beta, 2)
+  sd_beta ~ dunif(0, 10)
 
   mu.x ~ dunif(-10, 10)
   p.x = 1/pow(sd.x, 2)
   sd.x ~ dunif(0, 10)
   
-  missing = exp(envir[n_dat])
+  missing = exp(log_salinity[n_dat])
 }
