@@ -33,7 +33,9 @@ dat$log_salinity <- log(dat$Wsalinity)
 dat$log_WpH <- log(dat$WpH)
 dat$log_lakeArea <- log(dat$`Lake area`)
 
-dat.2 <- dat[,-c(8,10,14)]
+dat.2 <- dat
+
+# dat.2 <- dat[,-c(8,10,14)] #remove IIIc', IIa' and IIc'
 
 dat.2 <- dat.2 %>%
   pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity")
@@ -41,7 +43,8 @@ dat.2 <- dat.2[dat.2$intensity != 0, ] #remove lakes with signal intensity = 0
 
 dat.2$log_intensity <- log(dat.2$intensity)
 dat.2$bacteria <- as.factor(dat.2$bacteria)
-dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity")]
+dat.3 <- dat.2[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
+# dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity")] #for section 1 and 2
 
 p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
   geom_point() +
@@ -273,6 +276,21 @@ p2 <- b %>%
 ggarrange(p1, p2,
           ncol = 2, nrow = 1)
 
+## Section 3 Individual lakes regression salinity vs counts ####
+
+p.bar <- ggplot(dat.3, aes(x = bacteria , y = log_intensity)) +
+  geom_bar(stat="identity") + 
+  facet_wrap(vars(LakeName), ncol = 8) +
+  #labs(x = "Salinity (log)", y = "Signal intensity (log)") +
+  theme_bw()
+p.bar
+
+p.all <- ggplot(dat.3, aes(x = log_salinity, y = log_intensity, color=bacteria)) +
+  geom_point() +
+  #geom_smooth(method = lm) +
+  labs(x = "Salinity (log)", y = "Signal intensity (log)") +
+  theme_bw()
+p.all
 ## stan_glm OLD ##############
 
 lm_null <- stan_glm(log_intensity ~ 1,
