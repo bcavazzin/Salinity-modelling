@@ -21,11 +21,10 @@ library(tibble)
 library(tidyverse)
 library(ggpubr)
 
-# dataset ####
 
-# counts
+# dataset counts
 # including 0s
-dat <- read.csv("raw data/data_signal_intensity.csv",
+dat <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
                 check.names = FALSE, header = TRUE)
 
 dat <- dat[dat$Wsalinity != 0, ]
@@ -35,20 +34,25 @@ dat$log_WpH <- scale(log(dat$WpH), scale = FALSE)
 dat$log_lakeArea <- log(dat$`Lake area`)
 dat$MAT <- scale(dat$MAT, scale = FALSE)
 
-dat.2 <- dat
+# dat_long <- dat[, -c(8,10,14)]  # remove IIIc', IIa' and IIc'
 
-# dat.2 <- dat[,-c(8,10,14)] #remove IIIc', IIa' and IIc'
+# melt data
+dat_long <- dat %>%
+  pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity") |> 
+  mutate(log_intensity = log(intensity),
+         bacteria = as.factor(bacteria)) |> 
+  filter(intensity != 0) |>              # remove with signal intensity = 0
+  select("bacteria", "log_salinity", "log_intensity")
 
-dat.2 <- dat.2 %>%
-  pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity")
-dat.2 <- dat.2[dat.2$intensity != 0, ] #remove  with signal intensity = 0
+#dat.3 <- dat_long[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
 
-dat.2$log_intensity <- log(dat.2$intensity)
-dat.2$bacteria <- as.factor(dat.2$bacteria)
-#dat.3 <- dat.2[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
-dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity")] #for section 1 and 2
+save(dat_long, file = "raw data/dat_long.RData")
 
-p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
+
+############################
+# basic plots
+
+p1 <- ggplot(dat_long, aes(x = log_salinity, y = log_intensity)) +
   geom_point() +
   geom_smooth(method = lm) +
   facet_wrap(vars(bacteria), ncol = 4) +
@@ -59,26 +63,23 @@ p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
 p1
 
 
-############################
-# basic plots
-
 # pairs(dat)
 # GGally::ggpairs(dat, columns = 20:34)
 
 
 ## Frequentist no pool, pool, partial pool #################
 
-names_bacteria <- levels(dat.2$bacteria) 
+names_bacteria <- levels(dat_long$bacteria) 
 
 m_no_pooling <- list()
 
 for (i in names_bacteria) {
-  m_no_pooling[[i]] <- lm(log_intensity ~ log_salinity, filter(dat.2, bacteria == i)) 
+  m_no_pooling[[i]] <- lm(log_intensity ~ log_salinity, filter(dat_long, bacteria == i)) 
 }
 
 df_no_pooling <- tibble(
   Model = "No pooling",
-  bacteria = levels(dat.2$bacteria),
+  bacteria = levels(dat_long$bacteria),
   Intercept = sapply(m_no_pooling, coef)[1, ], 
   Slope_Salinity = sapply(m_no_pooling, coef)[2, ]
 )
@@ -86,12 +87,12 @@ df_no_pooling <- tibble(
 #write.csv(df_no_pooling, file = "df_no_pool.csv")
 #read.csv("df_no_pool.csv", row.names = 1)
 
-m_pooled <- lm(log_intensity ~ log_salinity, dat.2) 
+m_pooled <- lm(log_intensity ~ log_salinity, dat_long) 
 
 # Repeat the intercept and slope terms for each participant
 df_pooled <- tibble(
   Model = "Complete pooling",
-  bacteria = levels(dat.2$bacteria),
+  bacteria = levels(dat_long$bacteria),
   Intercept = coef(m_pooled)[1], 
   Slope_Salinity = coef(m_pooled)[2]
 )
@@ -103,12 +104,12 @@ df_models.1 <- bind_rows(df_pooled, df_no_pooling)
 
 ggplot(df_models.1) +
   facet_wrap("bacteria") +
-  geom_point(data = dat.2, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
+  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
   geom_abline(aes(intercept = Intercept, slope = Slope_Salinity, color = Model), size = 0.75) +
   theme_bw()
 
 
-mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat.2)
+mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat_long)
 mod.1
 
 df_partial_pooling <- coef(mod.1)[["bacteria"]] %>% 
@@ -123,7 +124,7 @@ df_models.2 <- bind_rows(df_models.1, df_partial_pooling)
 
 ggplot(df_models.2) +
   facet_wrap("bacteria") +
-  geom_point(data = dat.2, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
+  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
   geom_abline(aes(intercept = Intercept, slope = Slope_Salinity, color = Model), size = 0.75) +
   theme_bw()
 
@@ -135,7 +136,7 @@ df_pulled <- bind_rows(df_no_pooling, df_partial_pooling)
 b <- stan_glmer(
   log_intensity ~ log_salinity + (log_salinity | bacteria),
   family = gaussian(),
-  data = dat.2,
+  data = dat_long,
   # prior = normal(0, 2, autoscale = TRUE),
   # prior_intercept = normal(0, 5, autoscale = TRUE),
   # prior_covariance = decov(regularization = 2),
@@ -227,7 +228,7 @@ df_samples
 
 ggplot(df_samples) +
   facet_wrap("bacteria") +
-  geom_point(data = dat.2, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
+  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
   geom_abline(aes(intercept = Intercept, slope = log_salinity), size = 0.75,
               color = "#3366FF", 
               alpha = .1)
@@ -308,31 +309,31 @@ p.box
 
 lm_null <- stan_glm(log_intensity ~ 1,
                     family = "gaussian",
-                    data = dat.2)
+                    data = dat_long)
 
 yrep_lm_null <- posterior_predict(lm_null)
 
 lm11 <- stan_glmer(log_intensity ~ log_salinity + (log_salinity|bacteria),
                    family = "gaussian",
-                   data = dat.2)
+                   data = dat_long)
 
 yrep_lm11 <- posterior_predict(lm11)
 
 # plots
 
 color_scheme_set("brightblue")
-ppc_dens_overlay(dat.2$log_intensity, yrep_lm11[1:50, ])
-ppc_dens_overlay(dat.2$log_intensity, yrep_lm_null[1:50, ])
+ppc_dens_overlay(dat_long$log_intensity, yrep_lm11[1:50, ])
+ppc_dens_overlay(dat_long$log_intensity, yrep_lm_null[1:50, ])
 
-ppc_dens_overlay(dat.2$log_intensity, exp(yrep_lm11[1:100, ]))
-ppc_dens_overlay(dat.2$log_intensity, exp(yrep_lm_null[1:100, ])) 
+ppc_dens_overlay(dat_long$log_intensity, exp(yrep_lm11[1:100, ]))
+ppc_dens_overlay(dat_long$log_intensity, exp(yrep_lm_null[1:100, ])) 
 
-plot(dat.2$log_salinity, dat.2$log_intensity)
+plot(dat_long$log_salinity, dat_long$log_intensity)
 abline(coef(lm11)[1], coef(lm11)[2])
 
 # frequentist
 
 freq_lm <- lmer(log_intensity ~ log_salinity + (log_salinity|bacteria),
-                data = dat.2)
+                data = dat_long)
 
 freq_lm_pred <- predict(freq_lm)

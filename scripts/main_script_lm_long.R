@@ -13,35 +13,12 @@ library(mcmcplots)
 library(bayesplot)
 
 
-# mg/g sediment
-dat <- readr::read_csv("raw data/Dataset_concentration.csv")
-
-# clean data
-
-# remove dots
-# names(dat) <- gsub("\\.", "", names(dat))
-
-bac_names <- c("IIIa","IIIa.","IIIb","IIIb.","IIIc","IIIc.","IIa",
-               "IIa.","IIb","IIb.","IIc","IIc.",
-               "Ia","Ib","Ic")
-
-bac_names_log <- paste0(bac_names, "_log")
-
-# remove 0 entries
-dat[dat == 0] <- NA
-dat <- dat[complete.cases(dat), ]
-
-dat <- dat[dat$Wsalinity != 0, ]
-
-dat$log_salinity <- log(dat$Wsalinity)
-
-dat <- 
-  dat %>% mutate(across(all_of(bac_names), list(log = log)))
+load("raw data/dat_long.RData")
 
 
 # jags set-up
 
-filein <- "BUGS/model_missing_lm.txt"
+filein <- "BUGS/model_missing_lm_long.txt"
 params <- c("mu", "alpha", "beta", "missing")#, "pred")
 
 n.iter <- 20000
@@ -49,12 +26,11 @@ n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 
 dataJags <-
-  list(bac = as.matrix(dat[, bac_names_log]) |>
-         # rbind(rep(10, length(bac_names))),  # missing data bacteria
-         rbind(dat[nrow(dat), bac_names_log]),
-       n_bac = length(bac_names),
-       envir = c(dat$log_salinity, NA),
-       n_dat = nrow(dat) + 1)
+  list(bac_id = c(as.numeric(as.factor(dat_long$bacteria)), 1),
+       n_bac = length(unique(dat_long$bacteria)),
+       log_salinity = c(dat_long$log_salinity, NA),
+       intensity = c(dat_long$log_intensity, 13),
+       n_dat = nrow(dat_long) + 1)
 
 res_bugs <-
   jags(data = dataJags,
