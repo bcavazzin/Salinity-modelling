@@ -19,6 +19,7 @@ library(ggdist)
 library(magrittr)
 library(tibble)
 library(tidyverse)
+library(ggpubr)
 
 # dataset ####
 
@@ -34,7 +35,6 @@ dat$log_WpH <- scale(log(dat$WpH), scale = FALSE)
 dat$log_lakeArea <- log(dat$`Lake area`)
 dat$MAT <- scale(dat$MAT, scale = FALSE)
 
-
 dat.2 <- dat
 
 # dat.2 <- dat[,-c(8,10,14)] #remove IIIc', IIa' and IIc'
@@ -45,16 +45,19 @@ dat.2 <- dat.2[dat.2$intensity != 0, ] #remove  with signal intensity = 0
 
 dat.2$log_intensity <- log(dat.2$intensity)
 dat.2$bacteria <- as.factor(dat.2$bacteria)
-dat.3 <- dat.2[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
-dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity", "MAT", "WpH")] #for section 1 and 2
+#dat.3 <- dat.2[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
+dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity")] #for section 1 and 2
 
 p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
   geom_point() +
   geom_smooth(method = lm) +
   facet_wrap(vars(bacteria), ncol = 4) +
   labs(x = "Salinity (log)", y = "Signal intensity (log)") +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")),
+    p.accuracy = 0.001, r.accuracy = 0.01) + 
   theme_bw()
 p1
+
 
 ############################
 # basic plots
@@ -105,7 +108,7 @@ ggplot(df_models.1) +
   theme_bw()
 
 
-mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria) + MAT + WpH, dat.2)
+mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat.2)
 mod.1
 
 df_partial_pooling <- coef(mod.1)[["bacteria"]] %>% 
@@ -130,7 +133,7 @@ ggplot(df_models.2) +
 df_pulled <- bind_rows(df_no_pooling, df_partial_pooling)
 
 b <- stan_glmer(
-  log_intensity ~ log_salinity + (log_salinity | bacteria) + MAT + WpH,
+  log_intensity ~ log_salinity + (log_salinity | bacteria),
   family = gaussian(),
   data = dat.2,
   # prior = normal(0, 2, autoscale = TRUE),
