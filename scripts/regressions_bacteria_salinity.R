@@ -30,8 +30,10 @@ dat <- read.csv("raw data/data_signal_intensity.csv",
 dat <- dat[dat$Wsalinity != 0, ]
 
 dat$log_salinity <- log(dat$Wsalinity)
-dat$log_WpH <- log(dat$WpH)
+dat$log_WpH <- scale(log(dat$WpH), scale = FALSE)
 dat$log_lakeArea <- log(dat$`Lake area`)
+dat$MAT <- scale(dat$MAT, scale = FALSE)
+
 
 dat.2 <- dat
 
@@ -39,12 +41,12 @@ dat.2 <- dat
 
 dat.2 <- dat.2 %>%
   pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity")
-dat.2 <- dat.2[dat.2$intensity != 0, ] #remove lakes with signal intensity = 0
+dat.2 <- dat.2[dat.2$intensity != 0, ] #remove  with signal intensity = 0
 
 dat.2$log_intensity <- log(dat.2$intensity)
 dat.2$bacteria <- as.factor(dat.2$bacteria)
 dat.3 <- dat.2[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
-# dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity")] #for section 1 and 2
+dat.2 <- dat.2[, c("bacteria", "log_salinity", "log_intensity", "MAT", "WpH")] #for section 1 and 2
 
 p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
   geom_point() +
@@ -103,7 +105,7 @@ ggplot(df_models.1) +
   theme_bw()
 
 
-mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat.2)
+mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria) + MAT + WpH, dat.2)
 mod.1
 
 df_partial_pooling <- coef(mod.1)[["bacteria"]] %>% 
@@ -128,7 +130,7 @@ ggplot(df_models.2) +
 df_pulled <- bind_rows(df_no_pooling, df_partial_pooling)
 
 b <- stan_glmer(
-  log_intensity ~ log_salinity + (log_salinity | bacteria),
+  log_intensity ~ log_salinity + (log_salinity | bacteria) + MAT + WpH,
   family = gaussian(),
   data = dat.2,
   # prior = normal(0, 2, autoscale = TRUE),
@@ -291,6 +293,14 @@ p.all <- ggplot(dat.3, aes(x = log_salinity, y = log_intensity, color=bacteria))
   labs(x = "Salinity (log)", y = "Signal intensity (log)") +
   theme_bw()
 p.all
+
+p.box <- ggplot(dat.3, aes(x = log_salinity, y = log_intensity, color=LakeName)) +
+  geom_boxplot() +
+  #geom_smooth(method = lm) +
+  labs(x = "Salinity (log)", y = "Signal intensity (log)") +
+  theme(legend.position = "none")
+p.box
+
 ## stan_glm OLD ##############
 
 lm_null <- stan_glm(log_intensity ~ 1,
