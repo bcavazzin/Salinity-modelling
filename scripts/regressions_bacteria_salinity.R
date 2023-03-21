@@ -42,7 +42,7 @@ dat_long <- dat %>%
   mutate(log_intensity = log(intensity),
          bacteria = as.factor(bacteria)) |> 
   filter(intensity != 0) |>              # remove with signal intensity = 0
-  select("bacteria", "log_salinity", "log_intensity")
+  select("LakeID", "bacteria", "log_salinity", "log_intensity")
 
 #dat.3 <- dat_long[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
 
@@ -134,7 +134,7 @@ ggplot(df_models.2) +
 df_pulled <- bind_rows(df_no_pooling, df_partial_pooling)
 
 b <- stan_glmer(
-  log_intensity ~ log_salinity + (log_salinity | bacteria),
+  log_intensity ~ log_salinity + (1 + log_salinity | bacteria),
   family = gaussian(),
   data = dat_long,
   # prior = normal(0, 2, autoscale = TRUE),
@@ -145,6 +145,7 @@ b <- stan_glmer(
 )
 
 b
+prior_summary(b) #http://mc-stan.org/rstanarm/articles/priors.html
 xx <- extract(b)$stan_summary
 
 df_posterior <- b %>% 
@@ -251,9 +252,9 @@ p1 <- b %>%
   ggplot(aes(y = group, x = condition_mean, xmin = .lower, xmax = .upper)) +
   geom_pointinterval() +
   labs(x ="Mean Intercept", y = "") +
-  scale_y_discrete(labels = c("Ia", "Ib", "Ic", "IIa", "IIb",
-                              "IIb'", "IIc", "IIIa", "IIIa'",
-                              "IIIb", "IIIb'", "IIIc","Model av.")) + # "IIa'", "IIc'", "IIIc'"
+  scale_y_discrete(labels = c("Ia", "Ib", "Ic", "IIa", "IIa'", "IIb",
+                              "IIb'", "IIc","IIc'", "IIIa", "IIIa'",
+                              "IIIb", "IIIb'", "IIIc","IIIc'","Model av.")) + # "IIa'", "IIc'", "IIIc'"
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           panel.background = element_blank(), 
         axis.line = element_line(colour = "black"))
@@ -271,9 +272,9 @@ p2 <- b %>%
   ggplot(aes(y = group, x = condition_mean, xmin = .lower, xmax = .upper)) +
   geom_pointinterval()  +
   labs(x ="Mean Slope", y = "") +
-  scale_y_discrete(labels = c("Ia", "Ib", "Ic", "IIa", "IIb",
-                              "IIb'", "IIc", "IIIa", "IIIa'",
-                              "IIIb", "IIIb'", "IIIc","Model av.")) + # "IIa'", "IIc'", "IIIc'"
+  scale_y_discrete(labels = c("Ia", "Ib", "Ic", "IIa", "IIa'", "IIb",
+                              "IIb'", "IIc","IIc'", "IIIa", "IIIa'",
+                              "IIIb", "IIIb'", "IIIc","IIIc'","Model av.")) + # "IIa'", "IIc'", "IIIc'"
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black"))
@@ -304,6 +305,15 @@ p.box <- ggplot(dat.3, aes(x = log_salinity, y = log_intensity, color=LakeName))
   labs(x = "Salinity (log)", y = "Signal intensity (log)") +
   theme(legend.position = "none")
 p.box
+
+## diagnostics #####
+
+help('pareto-k-diagnostic')
+loo::pareto_k_table(b)
+
+loo::pareto_k_table(loo(b))
+loo::plot(loo(b))
+plot(loo(b))
 
 ## stan_glm OLD ##############
 

@@ -1,6 +1,5 @@
 
 # run BUGS model script
-# version _without_ missingness model
 # and forest plots
 
 library(R2jags)
@@ -13,34 +12,28 @@ library(R2WinBUGS)
 library(mcmcplots)
 library(bayesplot)
 
-
 load("raw data/dat_long.RData")
-
 
 # jags set-up
 
-filein <- "BUGS/model_lm_long.txt"
-params <- c("alpha", "beta", "mu_alpha", "sd_alpha","mu_beta", "sd_beta")
+filein <- "BUGS/model_missing_lm_long.txt"
+params <- c("alpha", "beta", "mu_alpha", "sd_alpha","mu_beta", "sd_beta", "missing")#, "pred")
 
-n.iter <- 50000
+#dat_long <- subset(dat_long, bacteria == c("Ib", "IIa", "IIb" ,"IIIa"))
+
+n.iter <- 20000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
-# dataJags <-
-#   list(bac_id = as.numeric(as.factor(dat_long$bacteria)),
-#        n_bac = length(unique(dat_long$bacteria)),
-#        log_salinity = dat_long$log_salinity,
-#        intensity = dat_long$log_intensity,
-#        n_dat = nrow(dat_long))
-
 dataJags <-
-  list(bac_id = as.numeric(as.factor(dat_long$bacteria)),
+  list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, dat_long$bacteria[n_dat]))),
        n_bac = length(unique(dat_long$bacteria)),
-       log_salinity = unique(dat_long$log_salinity),
-       lake = as.numeric(as.factor(dat_long$LakeID)),
-       intensity = dat_long$log_intensity,
-       n_dat = n_dat)
+       log_salinity = c(unique(dat_long$log_salinity), NA),
+       lake = c(as.numeric(as.factor(dat_long$LakeID)), 
+                max(as.numeric(as.factor(dat_long$LakeID))) + 1),
+       intensity = c(dat_long$log_intensity, dat_long$log_intensity[n_dat]),
+       n_dat = n_dat + 1)
 
 res_bugs <-
   jags(data = dataJags,
