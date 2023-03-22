@@ -17,7 +17,10 @@ load("raw data/dat_long.RData")
 # jags set-up
 
 filein <- "BUGS/model_missing_lm_long.txt"
-params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta", "missing", "log_missing", "mu.x", "p.x")#, "pred")
+params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
+            "sd_beta", "missing", "log_missing", "mu.x", "p.x",
+            # "pred_mean_lsalinity")#, "pred_lsalinity")
+            "mu", "intens_pred")
 
 #dat_long <- subset(dat_long, bacteria == c("Ib", "IIa", "IIb" ,"IIIa"))
 
@@ -67,9 +70,10 @@ output <- res_bugs$BUGSoutput
 x <- output$sims.matrix
 
 library(ggplot2)
-mcmc_areas(x, regex_pars = "alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
-mcmc_areas(x, regex_pars = "beta") #pars = c("beta[1]","beta[2]","beta[3]"))
+mcmc_areas(x, regex_pars = "^alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
+mcmc_areas(x, regex_pars = "^beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
+mcmc_areas(x, regex_pars = "intens_pred\\[1") #+ xlim(0, 50)
 
 
 save(output, file = "output_data/BUGS_output_missing.RData")
