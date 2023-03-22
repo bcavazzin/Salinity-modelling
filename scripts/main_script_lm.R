@@ -13,9 +13,6 @@ library(mcmcplots)
 library(bayesplot)
 
 
-##TODO
-# lake random effect?
-
 # mg/g sediment
 dat <- readr::read_csv("raw data/Dataset_concentration.csv")
 

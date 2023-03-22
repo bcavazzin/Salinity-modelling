@@ -11,6 +11,8 @@ library(mcmc)
 library(coda)
 library(mcmcplots)
 library(bayesplot)
+library(tidyr)
+library(ggplot2)
 
 # dataset ####
 
@@ -23,6 +25,25 @@ dat$log_salinity <- log(dat$Wsalinity)
 dat$log_WpH <- log(dat$WpH)
 dat$log_lakeArea <- log(dat$`Lake area`)
 
+### IR6me scatter
+plot(dat$log_salinity, dat$IR6) # ratio
+plot(dat$log_salinity, log(dat$IR6.Num)) # numer
+plot(dat$log_salinity, log(dat$IR6.den)) # denom
+
+## bacteria vs sal
+dat.2 <- dat %>%
+  pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity")
+dat.2$log_intensity <- log(dat.2$intensity)
+  
+p1 <- ggplot(dat.2, aes(x = log_salinity, y = log_intensity)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  facet_wrap(vars(bacteria), ncol = 4) +
+  labs(x = "Salinity (log)", y = "Signal intensity (log)") +
+  theme_bw()
+p1
+
+
 dat <- dat[dat$Wsalinity != 0, ]
 dat <- dat[dat$`Lake area` != 0, ]
 # dat <- dat[dat$bac != 0, ]
@@ -34,7 +55,7 @@ bac_names <- c("IIIa","IIIa.","IIIb","IIIb.","IIIc","IIIc.",
                "Ia","Ib","Ic")
 n_bac <- length(bac_names)
 
-# # standardize covariates
+     # # standardize covariates
 # dat <- mutate(dat, across(Lat:log_lakeArea, ~ (.x - mean(.x))/sd(.x)))
 
 

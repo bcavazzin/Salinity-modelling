@@ -1,10 +1,10 @@
 model {
 
   for (i in 1:n_dat) {
-    bac[bac_id[i]] ~ dnorm(mu[bac_id[i]], tau)
-    mu[bac_id[i]] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[i]
+    intensity[i] ~ dnorm(mu[i], tau)
+    mu[i] = alpha[bac_id[i], t[i]] + beta[bac_id[i], t[i]]*log_salinity[i]
       
-    log_salinity[i] ~ dnorm(mu.x, p.x)
+    log_salinity[i] ~ dnorm(mux.x + rho*mu.x[t[i]-1], p.x)
   }
 
   ## priors
@@ -13,8 +13,13 @@ model {
   sd.tau ~ dunif(0, 10)
  
   for (i in 1:n_bac) {
-    alpha[i] ~ dnorm(mu_alpha, tau_alpha)
-    beta[i] ~ dnorm(mu_beta, tau_beta)
+    alpha[i,1] ~ dnorm(mu_alpha, tau_alpha)
+    beta[i,1] ~ dnorm(mu_beta, tau_beta)
+
+    for (j in 2:t_max) {
+      alpha[i,j] ~ dnorm(alpha[i, j-1], tau_alpha)
+      beta[i,j] ~ dnorm(beta[i, j-1], tau_beta)
+    }
   }
 
   # random effects

@@ -1,10 +1,9 @@
 model {
 
   for (i in 1:n_dat) {
-    for (j in 1:n_bac) {
-      bac[i,j] ~ dnegbin(mu[i,j], r)
+      bac[i] ~ dbin(p[i],n[i])
       
-      logit(mu[i,j]) = alpha[j] + beta[1,j]*log_salinity[i]
+      logit(p[i]) = alpha + beta*log_salinity[i]
       
       #+ beta[2,j]*WT[i] + beta[3,j]*MAT[i] + beta[4,j]*log_lakeArea[i] + beta[5,j]*log_WpH[i]
     } 
@@ -14,17 +13,8 @@ model {
 
   ## priors
 
-  for (j in 1:n_bac) {
-    alpha[j] ~ dnorm(-13, 1)
-    
-    # for (k in 1:5) {
-    for (k in 1:1) {
-      beta[k,j] ~ dnorm(0.5, 1)
-    }
-  }
-
-  r ~ dnorm(0.25, 100)   # very tight priors
-  #r ~ dgamma(0.1, 0.1)
+    alpha ~ dnorm(-13, 1)
+      beta ~ dnorm(0.5, 1)
   
   mu.x ~ dunif(-1, 1)
   p.x = 1/pow(sd.x, 2)
