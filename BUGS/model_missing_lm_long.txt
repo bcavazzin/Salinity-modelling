@@ -39,11 +39,11 @@ model {
   }
   
   # posterior_prediction
-  #for (i in 1:n_dat) {
-  #  pred_lsalinity[i] = (intensity[i] - mu_alpha)/mu_beta
-  #  pred_lsalinity[i] = (intensity[i] - alpha[bac_id[i]])/beta[bac_id[i]]
-  #
-  #  inten_pred[i] ~ dnorm(mu[i], tau)
-  #  mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lake[i]]
-  #}
+  for (i in 1:n_dat) {
+    pred_lsalinity[i] = (intensity[i] - mu_alpha)/mu_beta
+    pred_lsalinity[i] = (intensity[i] - alpha[bac_id[i]])/beta[bac_id[i]]
+  
+    inten_pred[i] ~ dnorm(mu[i], tau)
+    mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lake[i]]
+  }
 }
