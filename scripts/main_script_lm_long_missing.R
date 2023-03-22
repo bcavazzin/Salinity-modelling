@@ -17,7 +17,7 @@ load("raw data/dat_long.RData")
 # jags set-up
 
 filein <- "BUGS/model_missing_lm_long.txt"
-params <- c("alpha", "beta", "mu_alpha", "sd_alpha","mu_beta", "sd_beta", "missing")#, "pred")
+params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta", "missing", "log_missing", "mu.x", "p.x")#, "pred")
 
 #dat_long <- subset(dat_long, bacteria == c("Ib", "IIa", "IIb" ,"IIIa"))
 
@@ -26,14 +26,33 @@ n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
+missing_lake_dat <-
+  dat_long |> 
+  filter(LakeID == 926)
+
+##TODO: could just append to bottom of dat_long?
+
+# dataJags <-
+#   list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, dat_long$bacteria[n_dat]))),
+#        n_bac = length(unique(dat_long$bacteria)),
+#        log_salinity = c(unique(dat_long$log_salinity), NA),
+#        lake = c(as.numeric(as.factor(dat_long$LakeID)), 
+#                 max(as.numeric(as.factor(dat_long$LakeID))) + 1),
+#        intensity = c(dat_long$log_intensity, dat_long$log_intensity[n_dat]),
+#        n_dat = n_dat + 1)
+
 dataJags <-
-  list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, dat_long$bacteria[n_dat]))),
+  list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, missing_lake_dat$bacteria))),
        n_bac = length(unique(dat_long$bacteria)),
-       log_salinity = c(unique(dat_long$log_salinity), NA),
+       log_salinity = c(unique(dat_long$log_salinity), rep(NA, nrow(missing_lake_dat))),
        lake = c(as.numeric(as.factor(dat_long$LakeID)), 
-                max(as.numeric(as.factor(dat_long$LakeID))) + 1),
-       intensity = c(dat_long$log_intensity, dat_long$log_intensity[n_dat]),
-       n_dat = n_dat + 1)
+                rep(max(as.numeric(as.factor(dat_long$LakeID))) + 1, nrow(missing_lake_dat))),
+       intensity = c(dat_long$log_intensity, missing_lake_dat$log_intensity),
+       n_dat = n_dat + nrow(missing_lake_dat),
+       n_obs = n_dat,
+       n_miss = nrow(missing_lake_dat),
+       n_lake_miss = length(unique(missing_lake_dat$LakeID)),
+       n_lake_obs = length(unique(dat_long$LakeID)))
 
 res_bugs <-
   jags(data = dataJags,
@@ -57,10 +76,10 @@ output <- res_bugs$BUGSoutput
 x <- output$sims.matrix
 
 library(ggplot2)
-mcmc_areas(x, pars = c("alpha[1]","alpha[2]","alpha[3]"))
-mcmc_areas(x, pars = c("beta[1]","beta[2]","beta[3]"))
+mcmc_areas(x, regex_pars = "alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
+mcmc_areas(x, regex_pars = "beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
 
 
-save(output, file = "output_data/BUGS_output.RData")
+save(output, file = "output_data/BUGS_output_missing.RData")
 

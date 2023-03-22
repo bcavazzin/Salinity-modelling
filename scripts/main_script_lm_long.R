@@ -40,6 +40,7 @@ dataJags <-
        log_salinity = unique(dat_long$log_salinity),
        lake = as.numeric(as.factor(dat_long$LakeID)),
        intensity = dat_long$log_intensity,
+       n_lake = length(unique(dat_long$log_salinity)),
        n_dat = n_dat)
 
 res_bugs <-
@@ -64,10 +65,8 @@ output <- res_bugs$BUGSoutput
 x <- output$sims.matrix
 
 library(ggplot2)
-mcmc_areas(x, pars = c("alpha[1]","alpha[2]","alpha[3]"))
-mcmc_areas(x, pars = c("beta[1]","beta[2]","beta[3]"))
-mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
-
+mcmc_areas(x, regex_pars = "alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
+mcmc_areas(x, regex_pars = "beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 
 save(output, file = "output_data/BUGS_output.RData")
 
