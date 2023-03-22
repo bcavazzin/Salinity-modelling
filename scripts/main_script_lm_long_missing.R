@@ -32,15 +32,6 @@ missing_lake_dat <-
 
 ##TODO: could just append to bottom of dat_long?
 
-# dataJags <-
-#   list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, dat_long$bacteria[n_dat]))),
-#        n_bac = length(unique(dat_long$bacteria)),
-#        log_salinity = c(unique(dat_long$log_salinity), NA),
-#        lake = c(as.numeric(as.factor(dat_long$LakeID)), 
-#                 max(as.numeric(as.factor(dat_long$LakeID))) + 1),
-#        intensity = c(dat_long$log_intensity, dat_long$log_intensity[n_dat]),
-#        n_dat = n_dat + 1)
-
 dataJags <-
   list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, missing_lake_dat$bacteria))),
        n_bac = length(unique(dat_long$bacteria)),
