@@ -31,7 +31,7 @@ n_dat <- nrow(dat_long)
 
 missing_lake_dat <-
   dat_long |> 
-  filter(LakeID == 926)
+  filter(LakeID == 890)
 
 ##TODO: could just append to bottom of dat_long?
 
