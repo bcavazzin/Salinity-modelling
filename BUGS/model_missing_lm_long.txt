@@ -6,8 +6,8 @@ model {
   }
 
   # missingness model
-  for (j in 1:n_lake_miss) {
-    log_salinity[n_lake_obs + j] ~ dnorm(mu.x, p.x)
+  for (j in 1:(n_lake_obs+n_lake_miss)) {
+    log_salinity[j] ~ dnorm(mu.x, p.x)
   }
   
   ## priors
@@ -29,9 +29,9 @@ model {
   tau_beta = 1/pow(sd_beta, 2)
   sd_beta ~ dunif(0, 10)
 
-  mu.x ~ dunif(-2, 3)
+  mu.x ~ dunif(-2, 5)
   p.x = 1/pow(sd.x, 2)
-  sd.x ~ dunif(0, 0.5)
+  sd.x ~ dunif(0, 0.1)
   
   for (j in 1:n_lake_miss) {
     log_missing[j] = log_salinity[n_lake_obs + j]
@@ -40,6 +40,7 @@ model {
   
   # posterior_prediction
   for (i in 1:n_dat) {
+    #pred_mean_lsalinity[i] = mu_alpha)/mu_beta
     #pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
     #pred_lsalinity[i] = (mu[i] - alpha[bac_id[i]])/beta[bac_id[i]]
   

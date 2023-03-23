@@ -18,9 +18,9 @@ load("raw data/dat_long.RData")
 
 filein <- "BUGS/model_missing_lm_long.txt"
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
-            "sd_beta", "missing", "log_missing", "mu.x", "p.x",
-            # "pred_mean_lsalinity")#, "pred_lsalinity")
-            "mu", "intens_pred")
+            "sd_beta", "missing", "log_missing", "mu.x", "p.x")#,
+            #  "pred_mean_lsalinity", #"pred_lsalinity")
+            # "mu", "intens_pred")
 
 #dat_long <- subset(dat_long, bacteria == c("Ib", "IIa", "IIb" ,"IIIa"))
 
@@ -31,7 +31,7 @@ n_dat <- nrow(dat_long)
 
 missing_lake_dat <-
   dat_long |> 
-  filter(LakeID == 890)
+  filter(LakeID == 926)
 
 ##TODO: could just append to bottom of dat_long?
 
@@ -70,11 +70,12 @@ output <- res_bugs$BUGSoutput
 x <- output$sims.matrix
 
 library(ggplot2)
+
 mcmc_areas(x, regex_pars = "^alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
 mcmc_areas(x, regex_pars = "^beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
 mcmc_areas(x, regex_pars = "intens_pred\\[1") #+ xlim(0, 50)
-
+mcmc_areas(x, pars = c("intens_pred[1071]","intens_pred[1072]","intens_pred[1073]","intens_pred[1076]"))
 
 save(output, file = "output_data/BUGS_output_missing.RData")
 
