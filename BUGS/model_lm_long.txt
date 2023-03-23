@@ -1,8 +1,9 @@
 model {
 
   for (i in 1:n_dat) {
-    intensity[i] ~ dnorm(mu[i], tau)
+    #intensity[i] ~ dnorm(mu[i], tau)
     ## mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[i]
+    intensity[lake[i], bac_id[i]] ~ dnorm(mu[i], tau)
     mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lake[i]]
   }
 

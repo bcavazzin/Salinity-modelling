@@ -15,7 +15,9 @@ library(bayesplot)
 
 
 load("raw data/dat_long.RData")
-
+dat <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
+                check.names = FALSE, header = TRUE)
+dat <- dat[dat$Wsalinity != 0, ]
 
 # jags set-up
 
@@ -26,6 +28,17 @@ n.iter <- 50000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
+
+# Lake ID and bacteria gorup matrix
+intens_mat <- dat %>% select("LakeID", "IIIa":"Ic")
+intens_mat[, 2:16] <- log(intens_mat[2:16],)
+intens_mat[intens_mat == -Inf] <- NA
+
+# order in same way as dat_long
+intens_matrix <- intens_mat[,-1]
+rownames(intens_matrix) <- intens_mat[,1]
+intens_matrix <- intens_matrix[levels(as.factor(dat_long$LakeID)), ]
+intens_matrix <- intens_matrix[, levels(dat_long$bacteria)] 
 
 # dataJags <-
 #   list(bac_id = as.numeric(as.factor(dat_long$bacteria)),
@@ -39,7 +52,7 @@ dataJags <-
        n_bac = length(unique(dat_long$bacteria)),
        log_salinity = unique(dat_long$log_salinity),
        lake = as.numeric(as.factor(dat_long$LakeID)),
-       intensity = dat_long$log_intensity,
+       intensity = intens_matrix, #dat_long$log_intensity,
        n_lake = length(unique(dat_long$log_salinity)),
        n_dat = n_dat)
 
