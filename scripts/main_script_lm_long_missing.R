@@ -16,9 +16,9 @@ library(tidyverse)
 
 # load data set ####
 load("raw data/dat_long.RData")
-dat <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
+dat_intens <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
                 check.names = FALSE, header = TRUE)
-dat <- dat[dat$Wsalinity != 0, ]
+dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
 
 # jags set-up ####
@@ -35,38 +35,45 @@ n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
 missing_lake_id <- 935
+
 missing_lake_dat <-
-  dat_long |> 
-  filter(LakeID == missing_lake_id)
+  filter(dat_long, LakeID == missing_lake_id) |> 
+  mutate(log_salinity = NA,
+         LakeID = 10000)
 
-# Lake ID and bacteria gorup matrix
-intens_mat <- dat %>% select("LakeID", "IIIa":"Ic")
-intens_mat[, 2:16] <- log(intens_mat[2:16],)
-intens_mat[intens_mat == -Inf] <- NA
+dat_total <-
+  bind_rows(dat_long, missing_lake_dat) |> 
+  arrange(LakeID)
 
-# order in same way as dat_long
-intens_matrix <- intens_mat[,-1]
-rownames(intens_matrix) <- intens_mat[,1]
+n_missing_dat <- nrow(missing_lake_dat)
+n_missing_lake <- length(missing_lake_id)
+  
+bac_names <- levels(dat_total$bacteria)
+lakeIDs <- sort(unique(dat_total$LakeID))
+n_lakes <- length(lakeIDs)
 
-intens_matrix <- intens_matrix[levels(as.factor(dat_long$LakeID)), ]
-intens_matrix <- intens_matrix[, levels(dat_long$bacteria)] 
+intens_mat <- dat_intens %>%
+  select("LakeID", "IIIa":"Ic") %>% 
+  mutate(across(everything(), ~replace(., . == 0, NA)),
+         across(
+           .cols = "IIIa":"Ic",
+           .fn = log)) |> 
+  arrange(LakeID) |> 
+  select(all_of(bac_names))
 
-intens_matrix[nrow(intens_matrix) + 1, ] <- intens_matrix[as.character(missing_lake_id), ]
-
-##TODO: could just append to bottom of dat_long?
+intens_mat[n_lakes, ] <- intens_mat[which(lakeIDs == missing_lake_id), ]
 
 dataJags <-
-  list(bac_id = as.numeric(as.factor(c(dat_long$bacteria, missing_lake_dat$bacteria))),
-       n_bac = length(unique(dat_long$bacteria)),
-       log_salinity = c(unique(dat_long$log_salinity), rep(NA, nrow(missing_lake_dat))),
-       lake = c(as.numeric(as.factor(dat_long$LakeID)), 
-                rep(max(as.numeric(as.factor(dat_long$LakeID))) + 1, nrow(missing_lake_dat))),
-       intensity = intens_matrix,  ### c(dat_long$log_intensity, missing_lake_dat$log_intensity)
-       n_dat = n_dat + nrow(missing_lake_dat),
+  list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
+       n_bac = length(bac_names),
+       log_salinity = dat_total$log_salinity,
+       lake = as.numeric(as.factor(dat_total$LakeID)),
+       intensity = intens_mat,
+       n_dat = n_dat + n_missing_dat,
        n_obs = n_dat,
-       n_miss = nrow(missing_lake_dat),
-       n_lake_miss = length(unique(missing_lake_dat$LakeID)),
-       n_lake_obs = length(unique(dat_long$LakeID)))
+       n_miss = n_missing_dat,
+       n_lake_miss = n_missing_lake,
+       n_lake_obs = n_lakes)
 
 res_bugs <-
   jags(data = dataJags,
