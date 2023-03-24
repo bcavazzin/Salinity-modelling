@@ -6,7 +6,7 @@ model {
   }
 
   # missingness model
-  for (j in 1:n_lake)) { 
+  for (j in 1:n_lake) { 
     log_salinity[j] ~ dnorm(mu.x, p.x)    
   }
   
