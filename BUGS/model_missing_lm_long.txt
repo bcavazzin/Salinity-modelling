@@ -7,7 +7,9 @@ model {
 
   # missingness model
   for (j in 1:n_lake)) { 
-    log_salinity[j] ~ dnorm(mu.x, p.x)    
+    log_salinity[j] ~ dnorm(mu, p.x)
+    #log_salinity[j] ~ dnorm(mu_s[j], p.x)
+    #mu_s[j] = beta_s*MAT[j]
   }
   
   ## priors
