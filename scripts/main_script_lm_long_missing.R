@@ -18,7 +18,8 @@ load("raw data/dat_long.RData")
 
 filein <- "BUGS/model_missing_lm_long.txt"
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
-            "sd_beta", "missing", "log_missing", "mu.x", "p.x")#,
+            "sd_beta", "missing", "log_missing", "mu.x", "p.x",
+            "log_salinity", "gamma")
             #  "pred_mean_lsalinity", #"pred_lsalinity")
             # "mu", "intens_pred")
 
