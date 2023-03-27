@@ -20,6 +20,7 @@ library(magrittr)
 library(tibble)
 library(tidyverse)
 library(ggpubr)
+library(GGally)
 
 
 # dataset counts
@@ -48,7 +49,6 @@ dat_long <- dat %>%
 
 save(dat_long, file = "raw data/dat_long.RData")
 
-
 ############################
 # basic plots
 
@@ -64,8 +64,10 @@ p1
 
 
 # pairs(dat)
-# GGally::ggpairs(dat, columns = 20:34)
-
+#GGally::ggpairs(dat, columns = 20:38)
+# plot(dat$log_salinity ~ log(dat$MAT))
+# plot(dat$log_salinity ~ dat$MAT)
+# abline(lm(dat$log_salinity ~ dat$Lat),col='red')
 
 ## Frequentist no pool, pool, partial pool #################
 
