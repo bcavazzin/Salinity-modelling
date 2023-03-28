@@ -17,75 +17,59 @@ library(tidyverse)
 # load data set ####
 load("raw data/dat_long.RData")
 names(dat_long)[names(dat_long) == "LakeID"] <- "Lake_name"
+#bacteria column as character
+dat_long$bacteria <- as.character(dat_long$bacteria)
+dat_long <- dat_long[dat_long$bacteria %in% c("IIIa", "IIIc", "IIa", "IIb", "IIb.","Ib"),]
+dat_long$bacteria <- as.factor(dat_long$bacteria)
 
 dat_intens <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
-                check.names = FALSE, header = TRUE)
-dat_intens <- dat_intens[,c(1, 3:37)]
-dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
+                       check.names = FALSE, header = TRUE)
 names(dat_intens)[names(dat_intens) == "LakeID"] <- "Lake_name"
+#dat_intens <- dat_intens[,c(1, 3:37)]
+dat_intens <- dat_intens[ ,c("Lake_name", "IIIa", "IIIc", "IIa", "IIb", "IIb.","Ib", "MAT", "Wsalinity")]
+dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
 # jags set-up ####
 
-filein <- "BUGS/model_missing_lm_long2.txt"
+filein <- "BUGS/model_predict_lm.txt"
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
-            "sd_beta", "missing", "log_missing", "mu.x", "p.x", "log_salinity", 
-            "beta_s", "gamma")#,
-            #  "pred_mean_lsalinity", #"pred_lsalinity")
-            # "mu", "intens_pred")
+            "sd_beta","pred_mean_lsalinity", "pred_lsalinity",
+            "mu", "intens_pred")
 
 n.iter <- 20000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
-missing_lake_name <- 908
-
-missing_lake_dat <-
-  filter(dat_long, Lake_name == missing_lake_name) |> 
-  mutate(log_salinity = NA,
-         Lake_name = 10000) #1000 lake name same as for ex. 854
-
 dat_total <-
-  bind_rows(dat_long, missing_lake_dat) |> 
+  bind_rows(dat_long) |> 
   arrange(Lake_name)
-
-n_missing_dat <- nrow(missing_lake_dat)
-n_missing_lake <- length(missing_lake_name)
   
-bac_names <- levels(dat_total$bacteria)
+allbac_names <- levels(dat_total$bacteria)
+bac_names <- allbac_names[allbac_names %in% c('Ib', 'IIa', 'IIb', 'IIb.', 'IIIa', 'IIIc')]
+
 lakeNames <- sort(unique(dat_total$Lake_name)) #LakeIDs
 n_lakes <- length(lakeNames)
 
-sal_dat <- dat_intens[order(dat_intens$Lake_name),]
-salinity_dat <- append(log(sal_dat$Wsalinity),'NA')
-
-MAT_miss <- dat_intens$MAT[dat_intens$Lake_name == missing_lake_name]
-MAT <- append(dat_intens$MAT, MAT_miss)
-
 intens_mat <- dat_intens %>%
-  select("Lake_name", "IIIa":"Ic") %>% 
+  select("Lake_name", "IIIa":"Ib") %>% 
   mutate(across(everything(), ~replace(., . == 0, NA)),
          across(
-           .cols = "IIIa":"Ic",
+           .cols = "IIIa":"Ib",
            .fn = log)) |> 
   arrange(Lake_name) |> 
   select(all_of(bac_names))
 
-intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
        n_bac = length(bac_names),
-       log_salinity = as.numeric(salinity_dat), #dat_total$log_salinity
+       log_salinity = as.numeric(dat_total$log_salinity), 
        lakeIDX = as.numeric(as.factor(dat_total$Lake_name)),
-       intensity = intens_mat, 
-       MAT = as.numeric(MAT),
-       n_dat = n_dat + n_missing_dat,
-       n_obs = n_dat,
-       n_miss = n_missing_dat,
-       n_lake_miss = n_missing_lake,
-       n_lake = n_lakes,
-       n_lake_obs = n_lakes-n_missing_lake)
+       intensity = intens_mat,
+       n_dat = n_dat,
+       n_lake = n_lakes
+       )
 
 res_bugs <-
   jags(data = dataJags,

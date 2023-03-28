@@ -1,0 +1,53 @@
+model {
+
+  for (i in 1:n_dat) {
+    intensity[lakeIDX[i], bac_id[i]] ~ dnorm(mu[i], tau)
+    mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lakeIDX[i]] 
+  }
+  
+  ## priors
+  
+  tau = 1/pow(sd.tau, 2)
+  sd.tau ~ dunif(0, 2) #0.5
+ 
+  for (i in 1:n_bac) {  
+    #alpha[i] ~ dnorm(alpha_glob, tau_alpha) T(0,)
+    #alpha[i] ~ dnorm(mu_alpha, tau_alpha) T(0,)
+     #beta[i] ~ dnorm(mu_beta, tau_beta) T(0.1,)
+     Z[i,1:2] ~ dmnorm(mu[i, 1:2], 
+     Omega[1:2,1:2])I(lo[i,1:2],up[i,1:2])
+  }
+  
+  lo[i] <- intensity[lakeIDX[i], bac_id[i]] - 0.5
+  up[i] <- intensity[lakeIDX[i], bac_id[i]] + 0.5
+  
+  Sigma[1,1] <- 1
+  Sigma[2,2] <- 1
+  Sigma[1,2] <- corr
+  Sigma[2,1] <- corr
+  corr ~ dunif(0.01, 2)
+  Omega[1:2, 1:2] <- inverse(Sigma[,])
+  
+  #alpha_glob ~ dnorm(mu_alpha, ) 
+  
+  # random effects
+  mu_alpha ~ dunif(8,14) #-10,10 
+  mu_beta ~ dunif(0,1) 
+  
+  tau_alpha = 1/pow(sd_alpha, 2)
+  sd_alpha ~ dunif(0, 1) #10
+  tau_beta = 1/pow(sd_beta, 2)
+  sd_beta ~ dunif(0, 1) 
+
+  
+  # posterior_prediction
+  for (i in 1:n_dat) {
+    #pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
+    #pred_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
+    #pred_lsalinity[i] = (intensity[lakeIDX[i], bac_id[i]] - alpha[bac_id[i]])/mu_beta
+    pred_lsalinity[i] = (intensity[lakeIDX[i], bac_id[i]] - alpha[bac_id[i]])/beta[bac_id[i]]
+  
+   #intens_pred[i] ~ dnorm(mu[i], tau)
+   #mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lakeIDX[i]]
+  }
+}
