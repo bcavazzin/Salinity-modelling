@@ -14,22 +14,24 @@ library(mcmcplots)
 library(bayesplot)
 library(tidyverse)
 
-# load data set ####
-load("raw data/dat_long.RData")
-names(dat_long)[names(dat_long) == "LakeID"] <- "Lake_name"
-#bacteria column as character
-dat_long$bacteria <- as.character(dat_long$bacteria)
-dat_long <- dat_long[dat_long$bacteria %in% c("IIIa", "IIIc", "IIa", "IIb", "IIb.","Ib"),]
-dat_long$bacteria <- as.factor(dat_long$bacteria)
 
+# load data set
+load("raw data/dat_long.RData")
 dat_intens <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
                        check.names = FALSE, header = TRUE)
+
+names(dat_long)[names(dat_long) == "LakeID"] <- "Lake_name"
+
+dat_long <- dat_long[dat_long$bacteria %in% c('Ib', 'IIa', 'IIb', 'IIb.', 'IIIa', 'IIIc'), ]
+dat_long$bacteria <- as.factor(as.character(dat_long$bacteria))
+
 names(dat_intens)[names(dat_intens) == "LakeID"] <- "Lake_name"
-#dat_intens <- dat_intens[,c(1, 3:37)]
-dat_intens <- dat_intens[ ,c("Lake_name", "IIIa", "IIIc", "IIa", "IIb", "IIb.","Ib", "MAT", "Wsalinity")]
+dat_intens <- dat_intens[, c("Lake_name", "IIIa", "IIIc", "IIa", "IIb",
+                             "IIb.", "Ib", "MAT", "Wsalinity")]
 dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
-# jags set-up ####
+
+# jags set-up
 
 filein <- "BUGS/model_predict_lm.txt"
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
@@ -45,10 +47,9 @@ dat_total <-
   bind_rows(dat_long) |> 
   arrange(Lake_name)
   
-allbac_names <- levels(dat_total$bacteria)
-bac_names <- allbac_names[allbac_names %in% c('Ib', 'IIa', 'IIb', 'IIb.', 'IIIa', 'IIIc')]
+bac_names <- levels(dat_total$bacteria)
 
-lakeNames <- sort(unique(dat_total$Lake_name)) #LakeIDs
+lakeNames <- sort(unique(dat_total$Lake_name))  # previous name LakeIDs
 n_lakes <- length(lakeNames)
 
 intens_mat <- dat_intens %>%
@@ -68,8 +69,7 @@ dataJags <-
        lakeIDX = as.numeric(as.factor(dat_total$Lake_name)),
        intensity = intens_mat,
        n_dat = n_dat,
-       n_lake = n_lakes
-       )
+       n_lake = n_lakes)
 
 res_bugs <-
   jags(data = dataJags,
@@ -102,9 +102,3 @@ mcmc_areas(x, pars = c("intens_pred[1071]","intens_pred[1072]","intens_pred[1073
 
 save(output, file = "output_data/BUGS_output_missing.RData")
 
-##
-
-for (i in 1:dataJags$n_dat) {
-  x <- dataJags$log_salinity[dataJags$lakeIDX[i]] 
-  print(x)
-}
