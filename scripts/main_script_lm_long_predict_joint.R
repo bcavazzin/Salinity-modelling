@@ -99,3 +99,23 @@ mcmc_areas(x, pars = c("intens_pred[1071]","intens_pred[1072]","intens_pred[1073
 
 save(output, file = "output_data/BUGS_output_missing.RData")
 
+
+########################
+# from GBs book
+# BUGS:
+#   model {
+#   for (i in 1:N) {
+#     y[i] ~ dnorm(mu[i],tau)
+#     mu[i] <- alpha + beta*X[i]
+#   }
+#   # Blocking of coefficients
+#   coef[1:2] ~ dmnorm(m[1:2],P[1:2,1:2])
+#   alpha <- coef[1]
+#   beta <- coef[2]
+#   lsigma ~ dunif(-k,k)
+#   sigma <- exp(lsigma)
+#   tau <- pow(sigma,-2)
+# }
+# 
+# R: m <- c(0,0)
+# prec <- (1/h^2)*diag(2)

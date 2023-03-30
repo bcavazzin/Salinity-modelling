@@ -11,7 +11,9 @@ model {
   sd.tau ~ dunif(0, 2)
  
   for (i in 1:n_bac) {  
-    lbeta[i, 1:2] ~ dmnorm(Z[], inv.bOmega[,])
+    #lbeta[i, 1:2] ~ dmnorm(Z[], inv.bOmega[,])
+    lbeta[i, 1:2] ~ dmnorm(mu_z[1:2], inv.bOmega[1:2,1:2])
+    
     alpha[i] <- exp(lbeta[i, 1])
     beta[i] <- exp(lbeta[i, 2])
   }
@@ -19,35 +21,41 @@ model {
   ##TODO: or do multivariate distribution in two steps?
   ## marginal and conditional
   ## this way can definitely use the T(0,) syntax
+  # see chapter 5 of bayesian ce book
   
-  R[1,1] <- 20
-  R[2,2] <- 0
-  R[1,2] <- 0
-  R[2,1] <- 2
-  inv.Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
+  alpha ~ dnorm(mu_alpha, sd_alpha)
+  beta ~ b + rho*(alpha - mu_alpha)
+  
+  rho ~ dnorm(mu_rho, sd_rho)
+  
+#  R[1,1] <- 20
+#  R[2,2] <- 0
+#  R[1,2] <- 0
+#  R[2,1] <- 2
+#  inv.Omega[1:2,1:2] ~ dwish(R[1:2,1:2], 2)
   
   bR[1,1] <- 20
-  bR[2,2] <- 0
-  bR[1,2] <- 0
+  bR[2,2] <- 0.1
+  bR[1,2] <- 0.1
   bR[2,1] <- 2
+  
   inv.bOmega[1:2,1:2] ~ dwish(bR[1:2,1:2], 2)
   
-  Z[1:2] ~ dmnorm(mu_z[], inv.Omega[,])
+#  Z[1:2] ~ dmnorm(mu_z[1:2], inv.Omega[1:2,1:2])
      
-  # random effects
   mu_z[1] ~ dunif(8, 14)
   mu_z[2] ~ dunif(0.01, 1) 
   
   # from: https://costa.eeb.ucsc.edu/wp-content/uploads/2015/10/hierarchical-slides.pdf
   # covariance matrix
-  Sigma[1:2,1:2] <- inverse(inv.Omega[1:2,1:2])
+  #Sigma[1:2,1:2] <- inverse(inv.Omega[1:2,1:2])
   
   # variances of the random effects
-  sigma2.alpha <- Sigma[1,1]
-  sigma2.beta <- Sigma[2,2]
+  #sigma2.alpha <- Sigma[1,1]
+  #sigma2.beta <- Sigma[2,2]
 
   # correlation between the intercepts and slopes
-  cor.alpha.beta <- Sigma[1,2]/(pow(sigma2.alpha,0.5)*pow(sigma2.beta,0.5))
+  #cor.alpha.beta <- Sigma[1,2]/(pow(sigma2.alpha,0.5)*pow(sigma2.beta,0.5))
 
   # posterior_prediction
   #for (i in 1:n_dat) {
