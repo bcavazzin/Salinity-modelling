@@ -1,8 +1,8 @@
 
-# run BUGS model script
+# run BUGS model script for two-step model
+# and joint prior on alpha, beta
 # and forest plots
 
-# library ####
 library(R2jags)
 library(dplyr)
 library(reshape2)
@@ -17,23 +17,26 @@ library(tidyverse)
 
 # load data set
 load("raw data/dat_long.RData")
+
 dat_intens <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
                        check.names = FALSE, header = TRUE)
 
-names(dat_long)[names(dat_long) == "LakeID"] <- "Lake_name"
+names(dat_long)[names(dat_long) == "LakeID"] <- "lake_label"
 
-dat_long <- dat_long[dat_long$bacteria %in% c('Ib', 'IIa', 'IIb', 'IIb.', 'IIIa', 'IIIc'), ]
+bac_keep <- c('Ib', 'IIa', 'IIb', 'IIb.', 'IIIa', 'IIIc')
+
+dat_long <- dat_long[dat_long$bacteria %in% bac_keep, ]
 dat_long$bacteria <- as.factor(as.character(dat_long$bacteria))
 
-names(dat_intens)[names(dat_intens) == "LakeID"] <- "Lake_name"
-dat_intens <- dat_intens[, c("Lake_name", "IIIa", "IIIc", "IIa", "IIb",
-                             "IIb.", "Ib", "MAT", "Wsalinity")]
+names(dat_intens)[names(dat_intens) == "LakeID"] <- "lake_label"
+dat_intens <- dat_intens[, c("lake_label", bac_keep, "MAT", "Wsalinity")]
 dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
 
 # jags set-up
 
-filein <- "BUGS/model_predict_lm.txt"
+filein <- "BUGS/model_predict_lm_joint.txt"
+
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
             "sd_beta","pred_mean_lsalinity", "pred_lsalinity",
             "mu", "intens_pred")
@@ -43,31 +46,25 @@ n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
-dat_total <-
-  bind_rows(dat_long) |> 
-  arrange(Lake_name)
+dat_total <- dat_long |> arrange(lake_label)
   
-bac_names <- levels(dat_total$bacteria)
+lake_labels <- sort(unique(dat_total$lake_label))
 
-lakeNames <- sort(unique(dat_total$Lake_name))  # previous name LakeIDs
-n_lakes <- length(lakeNames)
+n_lakes <- length(lake_labels)
 
 intens_mat <- dat_intens %>%
-  select("Lake_name", "IIIa":"Ib") %>% 
+  select("lake_label", bac_keep) %>%
   mutate(across(everything(), ~replace(., . == 0, NA)),
-         across(
-           .cols = "IIIa":"Ib",
-           .fn = log)) |> 
-  arrange(Lake_name) |> 
-  select(all_of(bac_names))
-
+         across(.cols = bac_keep, .fn = log)) |> 
+  arrange(lake_label) |> 
+  select(all_of(bac_keep))
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
-       n_bac = length(bac_names),
-       log_salinity = as.numeric(dat_total$log_salinity), 
-       lakeIDX = as.numeric(as.factor(dat_total$Lake_name)),
+       log_salinity = log(dat_intens$Wsalinity), 
+       lake_id = as.numeric(as.factor(dat_total$lake_label)),
        intensity = intens_mat,
+       n_bac = length(bac_keep),
        n_dat = n_dat,
        n_lake = n_lakes)
 
