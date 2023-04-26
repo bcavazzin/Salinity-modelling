@@ -30,43 +30,71 @@ dat_long <- dat_long[dat_long$bacteria %in% bac_keep, ]
 dat_long$bacteria <- as.factor(as.character(dat_long$bacteria))
 
 names(dat_intens)[names(dat_intens) == "LakeID"] <- "lake_label"
-dat_intens <- dat_intens[, c("lake_label", bac_keep, "MAT", "Wsalinity")]
+dat_intens <- dat_intens[, c('lake_label', 'Ib', 'Ic', 'IIa', 'IIb', 'IIb.', 'IIc','IIIa', 'IIIa.',
+                         'IIIb','IIIb.','IIIc', 'MAT', 'Wsalinity')]
 dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
 # jags set-up
 
-filein <- "BUGS/model_predict_lm_joint.txt"
+filein <- "BUGS/model_predict_lm_joint_missing.txt"
 
-params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
+params <- c("alpha", "beta", "log_salinity", "mu_alpha", "sd_alpha", "mu_beta",
             "sd_beta","pred_mean_lsalinity", "pred_lsalinity",
             "mu", "intens_pred")
 
-n.iter <- 20000
-n.burnin <- 1000
+n.iter <- 200000
+n.burnin <- 10000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
-dat_total <- dat_long |> arrange(lake_label)
-  
-lake_labels <- sort(unique(dat_total$lake_label))
+missing_lake_name <- 884
 
-n_lakes <- length(lake_labels)
+missing_lake_dat <-
+  filter(dat_long, lake_label == missing_lake_name) |> 
+  mutate(log_salinity = NA,
+         lake_label = 10000) #1000 lake name same as for ex. 854
+
+dat_total <-
+  bind_rows(dat_long, missing_lake_dat) |> 
+  arrange(lake_label)
+
+n_missing_dat <- nrow(missing_lake_dat)
+n_missing_lake <- length(missing_lake_name)
+
+bac_names <- levels(dat_total$bacteria)
+lakeNames <- sort(unique(dat_total$lake_label)) #LakeIDs
+n_lakes <- length(lakeNames)
+
+sal_dat <- dat_intens[order(dat_intens$lake_label),]
+salinity_dat <- append(log(sal_dat$Wsalinity),'NA')
+
+MAT_miss <- dat_intens$MAT[dat_intens$lake_label == missing_lake_name]
+MAT <- append(dat_intens$MAT, MAT_miss)
 
 intens_mat <- dat_intens %>%
-  select("lake_label", bac_keep) %>%
+  select("lake_label", "Ib":"IIIc") %>% 
   mutate(across(everything(), ~replace(., . == 0, NA)),
-         across(.cols = bac_keep, .fn = log)) |> 
+         across(
+           .cols = "IIIa":"Ic",
+           .fn = log)) |> 
   arrange(lake_label) |> 
-  select(all_of(bac_keep))
+  select(all_of(bac_names))
+
+intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
-       log_salinity = log(dat_intens$Wsalinity), 
+       n_bac = length(bac_names),
+       log_salinity = as.numeric(salinity_dat), 
        lake_id = as.numeric(as.factor(dat_total$lake_label)),
        intensity = intens_mat,
-       n_bac = length(bac_keep),
-       n_dat = n_dat,
-       n_lake = n_lakes)
+       MAT = as.numeric(MAT), # 
+       n_dat = n_dat + n_missing_dat,
+       n_obs = n_dat,
+       n_miss = n_missing_dat,
+       n_lake_miss = n_missing_lake,
+       n_lake = n_lakes,
+       n_lake_obs = n_lakes-n_missing_lake)
 
 res_bugs <-
   jags(data = dataJags,
@@ -79,8 +107,9 @@ res_bugs <-
        n.thin,
        DIC = TRUE)
 
+options(max.print=100000)
 print(res_bugs)
-mcmcplot(res_bugs)
+#mcmcplot(res_bugs)
 
 # plots <- traceplot(res_bugs)
 
@@ -108,6 +137,15 @@ beta.poster <- x.dat %>%
 
 dat.post <- cbind(alpha.poster, beta.poster)
 
+ggplot(x.dat) +
+  aes(x = `alpha[1]`, y = `beta[1]`) +
+  stat_density2d(aes(fill = after_stat(level)), 
+                 geom = "polygon", 
+                 # normalized density so all colors appear in each plot
+                 contour_var = "ndensity",
+                 scales = "free" 
+  )
+
 ggplot(dat.post) + 
   aes(x = Alpha, y = Beta) + 
   stat_density_2d(
@@ -116,7 +154,8 @@ ggplot(dat.post) +
     # normalized density so all colors appear in each plot
     contour_var = "ndensity"
   ) +
-  facet_wrap("bacteria.alpha") + 
+  facet_wrap("bacteria.alpha",
+                 scales = "free") + 
   xlab("Intercept estimate") + 
   ylab("Slope estimate") +
   guides(fill = "none") 
@@ -173,6 +212,7 @@ mcmc_areas(x, regex_pars = "^beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
 mcmc_areas(x, regex_pars = "intens_pred\\[1]") #+ xlim(0, 50)
 mcmc_areas(x, pars = c("intens_pred[1071]","intens_pred[1072]","intens_pred[1073]","intens_pred[1076]"))
+mcmc_areas(x, regex_pars = "pred_mean_lsalinity")
 
 save(output, file = "output_data/BUGS_output_missing.RData")
 

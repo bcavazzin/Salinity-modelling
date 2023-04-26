@@ -132,7 +132,6 @@ ggplot(df_models.2) +
 
 ## Bayesian no pool, pool, partial pool####################
 
-
 df_pulled <- bind_rows(df_no_pooling, df_partial_pooling)
 
 b <- stan_glmer(
