@@ -26,7 +26,7 @@ names(dat_intens)[names(dat_intens) == "LakeID"] <- "Lake_name"
 
 # jags set-up ####
 
-filein <- "BUGS/model_missing_lm_long2.txt"
+filein <- "BUGS/model_missing_lm_long.txt"
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
             "sd_beta", "missing", "log_missing", "mu.x", "p.x", "log_salinity", 
             "beta_s", "gamma")#,
@@ -77,9 +77,9 @@ dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
        n_bac = length(bac_names),
        log_salinity = as.numeric(salinity_dat), #dat_total$log_salinity
-       lakeIDX = as.numeric(as.factor(dat_total$Lake_name)),
+       lake_id = as.numeric(as.factor(dat_total$Lake_name)),
        intensity = intens_mat, 
-       MAT = as.numeric(MAT),
+       #MAT = as.numeric(MAT),
        n_dat = n_dat + n_missing_dat,
        n_obs = n_dat,
        n_miss = n_missing_dat,
@@ -121,6 +121,6 @@ save(output, file = "output_data/BUGS_output_missing.RData")
 ##
 
 for (i in 1:dataJags$n_dat) {
-  x <- dataJags$log_salinity[dataJags$lakeIDX[i]] 
+  x <- dataJags$log_salinity[dataJags$lake_id[i]] 
   print(x)
 }

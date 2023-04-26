@@ -36,27 +36,31 @@ dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
 
 # jags set-up
 
-filein <- "BUGS/model_predict_lm_joint_missing.txt"
+filein <- "BUGS/two_step_predict_model.txt"
 
-params <- c("alpha", "beta", "log_salinity", "mu_alpha", "sd_alpha", "mu_beta",
-            "sd_beta","pred_mean_lsalinity", "pred_lsalinity",
-            "mu", "intens_pred")
+params <- c("alpha", "beta", "tau_alpha","log_salinity", "mu_alpha", "sd_alpha", "mu_beta",
+            "sd_beta", "mu", "intens_pred","pred_mean_lsalinity", "pred_lsalinity")
 
-n.iter <- 200000
-n.burnin <- 10000
+
+n.iter <- 20000
+n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
-missing_lake_name <- 884
+missing_lake_name <- 947
 
 missing_lake_dat <-
   filter(dat_long, lake_label == missing_lake_name) |> 
   mutate(log_salinity = NA,
          lake_label = 10000) #1000 lake name same as for ex. 854
 
+# missing_lake_dat2 <-
+#   filter(dat_long, lake_label == miss_lake_name) |> 
+#   mutate(lake_label = 10000) #1000 lake name same as for ex. 854
+
 dat_total <-
-  bind_rows(dat_long, missing_lake_dat) |> 
-  arrange(lake_label)
+  bind_rows(dat_long, missing_lake_dat) |>
+  arrange(lake_label) 
 
 n_missing_dat <- nrow(missing_lake_dat)
 n_missing_lake <- length(missing_lake_name)
@@ -66,7 +70,7 @@ lakeNames <- sort(unique(dat_total$lake_label)) #LakeIDs
 n_lakes <- length(lakeNames)
 
 sal_dat <- dat_intens[order(dat_intens$lake_label),]
-salinity_dat <- append(log(sal_dat$Wsalinity),'NA')
+salinity_dat <- append(log(sal_dat$Wsalinity), NA)
 
 MAT_miss <- dat_intens$MAT[dat_intens$lake_label == missing_lake_name]
 MAT <- append(dat_intens$MAT, MAT_miss)
@@ -85,16 +89,17 @@ intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
        n_bac = length(bac_names),
-       log_salinity = as.numeric(salinity_dat), 
+       log_salinity = salinity_dat, 
        lake_id = as.numeric(as.factor(dat_total$lake_label)),
        intensity = intens_mat,
-       MAT = as.numeric(MAT), # 
-       n_dat = n_dat + n_missing_dat,
-       n_obs = n_dat,
-       n_miss = n_missing_dat,
-       n_lake_miss = n_missing_lake,
-       n_lake = n_lakes,
-       n_lake_obs = n_lakes-n_missing_lake)
+       #MAT = as.numeric(MAT), # 
+       n_dat = n_dat + n_missing_dat)
+      #,
+       # n_obs = n_dat,
+       # n_miss = n_missing_dat,
+       # n_lake_miss = n_missing_lake,
+       # n_lake = n_lakes,
+       # n_lake_obs = n_lakes-n_missing_lake
 
 res_bugs <-
   jags(data = dataJags,
@@ -114,38 +119,46 @@ print(res_bugs)
 # plots <- traceplot(res_bugs)
 
 R2WinBUGS::attach.bugs(res_bugs$BUGSoutput)
-
 output <- res_bugs$BUGSoutput
 
+# BUGS output into data frame
 x <- output$sims.matrix
-
 x.dat <- as.data.frame(x)
 
+# create long dataset of model output alphas and betas for each bacteria
 alpha.poster <- x.dat %>%
   as.data.frame()%>%
   select(starts_with("alpha")) %>%
   pivot_longer(everything(),
                names_to = "bacteria.alpha",
                values_to = "Alpha")
-
 beta.poster <- x.dat %>%
   as.data.frame()%>%
   select(starts_with("beta")) %>%
   pivot_longer(everything(),
                names_to = "bacteria.beta",
                values_to = "Beta")
-
+# merge the two
 dat.post <- cbind(alpha.poster, beta.poster)
 
-ggplot(x.dat) +
-  aes(x = `alpha[1]`, y = `beta[1]`) +
-  stat_density2d(aes(fill = after_stat(level)), 
-                 geom = "polygon", 
-                 # normalized density so all colors appear in each plot
-                 contour_var = "ndensity",
-                 scales = "free" 
-  )
+dat.post <- dat.post %>% 
+  separate(bacteria.alpha, c('param', 'bacteria')) %>%
+  mutate(
+    bacteria = case_match(bacteria,
+                          "1" ~ "Ib",
+                          "2" ~ "Ic",
+                          "3" ~ "IIa",
+                          "4" ~ "IIb",
+                          "5"~ "IIb.",
+                          "6"~ "IIc",
+                          "7"~ "IIIa",
+                          "8"~ "IIIa.",
+                          "9"~ "IIIb",
+                          "10" ~ "IIIb.",
+                          "11" ~ "IIIc"))
 
+
+# 2D density plot of the alphas and betas 
 ggplot(dat.post) + 
   aes(x = Alpha, y = Beta) + 
   stat_density_2d(
@@ -154,8 +167,8 @@ ggplot(dat.post) +
     # normalized density so all colors appear in each plot
     contour_var = "ndensity"
   ) +
-  facet_wrap("bacteria.alpha",
-                 scales = "free") + 
+  facet_wrap("bacteria", 
+             scales = "free") + 
   xlab("Intercept estimate") + 
   ylab("Slope estimate") +
   guides(fill = "none") 

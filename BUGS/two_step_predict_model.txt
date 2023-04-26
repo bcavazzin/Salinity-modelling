@@ -1,0 +1,42 @@
+# Two step BUGS model independent distribution on the slope and intercept + prediction 
+# Missing model with salinity troncation: T(-2.5,7)
+
+model {
+
+  for (i in 1:n_dat) {
+  
+   intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau)
+    mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]] 
+  }
+
+  ## priors
+  
+  tau = 1/pow(sd.tau, 2)
+  sd.tau ~ dunif(0, 50)
+ 
+  for (i in 1:n_bac) {  
+    alpha[i] ~ dnorm(mu_alpha, tau_alpha)
+    beta[i] ~ dnorm(mu_beta, tau_beta)T(0,) #truncation at 0 so it's positive
+  }
+
+  # random effects
+  mu_alpha ~ dunif(0,500) 
+  mu_beta ~ dunif(0.1,10) # orig 0,10
+  
+  tau_alpha = 1/pow(sd_alpha, 2)
+  sd_alpha ~ dunif(0, 10)
+  tau_beta = 1/pow(sd_beta, 2)
+  sd_beta ~ dunif(0, 10)
+  
+  sd.x ~ dunif(0, 0.01) #orig 0.01
+
+  # posterior_prediction
+
+  for (i in 1:n_dat) {
+    pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
+    pred_lsalinity[i] = (mu[i] - alpha[bac_id[i]])/beta[bac_id[i]]
+  
+   intens_pred[i] ~ dnorm(delta[i], tau)
+   delta[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lake_id[i]]
+  }
+}

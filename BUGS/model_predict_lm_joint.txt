@@ -11,9 +11,9 @@ model {
   
    # missingness model
   for (j in 1:n_lake) { 
-    log_salinity[j] ~ dnorm(mu.x, p.x)T(-2.5,7) # Without MAT
-    #log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5,7) #With MAT (T valuesin the log scale)
-    #mu_s[j] = beta_s*MAT[j] #+ beta_p*Summerp[j]
+    #log_salinity[j] ~ dnorm(mu.x, p.x)T(-2.5,7) # Without MAT
+    log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5,7) #With MAT (T valuesin the log scale)
+    mu_s[j] = beta_s*MAT[j] #+ beta_p*Summerp[j]
   
   }
   
@@ -22,7 +22,7 @@ model {
   mu.x ~ dunif(-2, 5)
   p.x = 1/pow(sd.x, 2)
   sd.x ~ dunif(0, 0.1)
-  #beta_s ~ dnorm(0,0.001)
+  beta_s ~ dnorm(0,0.001)
    
   tau = 1/pow(sd.tau, 2)
   sd.tau ~ dunif(0, 2)
@@ -34,15 +34,15 @@ model {
     beta[i] <- exp(lbeta[i, 2])
   }
 
-  bR[1,1] <- 1 #precision inter (orig value 20)
-  bR[2,2] <- 1  #precision slope (orig value 2)
-  bR[1,2] <- 0.1 #1/covariance 
-  bR[2,1] <- 0.1 #1/covariance 
+  bR[1,1] <- 5  #precision inter (original 20)
+  bR[2,2] <- 2   #precision slope (original 2)
+  bR[1,2] <- 0.1 #1/covariance 0.1
+  bR[2,1] <- 0.1 #1/covariance 0.1
   
   inv.bOmega[1:2,1:2] ~ dwish(bR[1:2,1:2], 2)
      
   mu_z[1] ~ dunif(1, 14) #dunif(8, 14)  
-  mu_z[2] ~ dunif(0.01, 1) 
+  mu_z[2] ~ dunif(0.01, 5) #dunif(0.01, 1)
   
   # from: https://costa.eeb.ucsc.edu/wp-content/uploads/2015/10/hierarchical-slides.pdf
   # covariance matrix
