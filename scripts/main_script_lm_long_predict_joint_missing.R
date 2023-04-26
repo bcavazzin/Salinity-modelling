@@ -99,7 +99,7 @@ dataJags <-
        # n_miss = n_missing_dat,
        # n_lake_miss = n_missing_lake,
        # n_lake = n_lakes,
-       # n_lake_obs = n_lakes-n_missing_lake
+       # n_lake_obs = n_lakes-n_missing_lake)
 
 res_bugs <-
   jags(data = dataJags,
