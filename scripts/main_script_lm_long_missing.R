@@ -16,12 +16,12 @@ library(bayesplot)
 library(tidyverse)
 
 
-# load data set ####
 load("raw data/dat_long.RData")
 load("raw data/intens_mat.RData")
 
 
-# jags set-up ####
+#################
+# jags set-up
 
 filein <- "BUGS/model_missing_lm_long.txt"
 
@@ -67,6 +67,10 @@ MAT <- append(dat_intens$MAT, MAT_miss)
 
 #
 intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
+
+
+#############
+# run model
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
