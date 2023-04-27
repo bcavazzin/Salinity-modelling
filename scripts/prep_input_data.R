@@ -1,4 +1,5 @@
 # prep_input_data
+# required before fitting BUGS models
 
 
 #######################

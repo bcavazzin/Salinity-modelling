@@ -36,6 +36,11 @@ n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
 
+
+####################
+# prep missing data
+
+# select a lake
 missing_lake_name <- 908
 
 missing_lake_dat <-
@@ -51,15 +56,16 @@ n_missing_dat <- nrow(missing_lake_dat)
 n_missing_lake <- length(missing_lake_name)
 
 bac_names <- levels(dat_total$bacteria)
-lakeNames <- sort(unique(dat_total$Lake_name)) #LakeIDs
+lakeNames <- sort(unique(dat_total$Lake_name)) # previously called LakeIDs
 n_lakes <- length(lakeNames)
 
-sal_dat <- dat_intens[order(dat_intens$Lake_name),]
-salinity_dat <- append(log(sal_dat$Wsalinity),'NA')
+sal_dat <- dat_intens[order(dat_intens$Lake_name), ]
+salinity_dat <- append(log(sal_dat$Wsalinity), NA)
 
 MAT_miss <- dat_intens$MAT[dat_intens$Lake_name == missing_lake_name]
 MAT <- append(dat_intens$MAT, MAT_miss)
 
+#
 intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 dataJags <-
@@ -88,16 +94,21 @@ res_bugs <-
        DIC = TRUE)
 
 print(res_bugs)
-mcmcplot(res_bugs)
-# plots <- traceplot(res_bugs)
-
 R2WinBUGS::attach.bugs(res_bugs$BUGSoutput)
 
 output <- res_bugs$BUGSoutput
-
 x <- output$sims.matrix
 
+save(output, file = "output_data/BUGS_output_missing.RData")
+
+
+##########
+# plots
+
 library(ggplot2)
+
+mcmcplot(res_bugs)
+# plots <- traceplot(res_bugs)
 
 mcmc_areas(x, regex_pars = "^alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]"))
 mcmc_areas(x, regex_pars = "^beta") #pars = c("beta[1]","beta[2]","beta[3]"))
@@ -107,8 +118,6 @@ mcmc_areas(x, pars = c("intens_pred[1071]",
                        "intens_pred[1072]",
                        "intens_pred[1073]",
                        "intens_pred[1076]"))
-
-save(output, file = "output_data/BUGS_output_missing.RData")
 
 ##
 
