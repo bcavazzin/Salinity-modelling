@@ -1,20 +1,19 @@
-# independent distribution on the slope and intercept + missing model 
-# Missing model with salinity troncation: T(-2.5,7)
-# predict model from line 59
+# independent distributions on the slope and intercept, missing data model 
 
 model {
 
   for (i in 1:n_dat) {
-  
-   intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau)
+    intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau)
     mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]] 
   }
 
   # missingness model
   for (j in 1:n_lake) { 
-    log_salinity[j] ~ dnorm(mu.x, p.x) #Without MAT
-    #log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5,7) #With MAT. T valuesin the log scale)
-    #mu_s[j] = beta_s*MAT[j] #+ beta_p*Summerp[j]
+    log_salinity[j] ~ dnorm(mu.x, p.x)T(-2.5, 7)
+    
+    # # regression
+    #log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5, 7)
+    #mu_s[j] = beta_s*MAT[j]
   }
   
   ## priors
@@ -24,24 +23,26 @@ model {
  
   for (i in 1:n_bac) {  
     alpha[i] ~ dnorm(mu_alpha, tau_alpha)
-    beta[i] ~ dnorm(mu_beta, tau_beta)T(0,) #truncation at 0 so it's positive
+    beta[i] ~ dnorm(mu_beta, tau_beta)T(0,)
   }
 
   # random effects
-  mu_alpha ~ dunif(0,500) 
-  mu_beta ~ dunif(0.1,10) # orig 0,10
+  mu_alpha ~ dunif(0, 500) 
+  mu_beta ~ dunif(0.1, 10)
   
   tau_alpha = 1/pow(sd_alpha, 2)
   sd_alpha ~ dunif(0, 10)
   tau_beta = 1/pow(sd_beta, 2)
   sd_beta ~ dunif(0, 10)
 
-  mu.x ~ dunif(-2,5) #to use with sal and intensity alone orig -2,5
+  mu.x ~ dunif(-2,5)
   p.x = 1/pow(sd.x, 2)
-  #beta_s ~ dnorm(0,0.001)
-  #beta_p ~ dnorm(0,0.001)
+  #beta_s ~ dnorm(0, 0.001)
+  #beta_p ~ dnorm(0, 0.001)
 
-  sd.x ~ dunif(0, 0.01) #orig 0.01
+  sd.x ~ dunif(0, 0.01)
+
+  ## generated quantities
 
   for (j in 1:n_lake_miss) { 
     log_missing[j] = log_salinity[n_lake_obs + j] 
@@ -49,12 +50,15 @@ model {
   }
   
   # posterior_prediction
-  #pred_mean_lsalinity[] = (mu[] - mu_alpha)/mu_beta
-  for (i in 1:n_dat) {
-    #pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
-    #pred_lsalinity[i] = (mu[i] - alpha[bac_id[i]])/beta[bac_id[i]]
   
-   intens_pred[i] ~ dnorm(mu[i], tau)
-   #mu[i] = alpha[bac_id[i]] + beta[bac_id[i]]*log_salinity[lake_id[i]]
+  for (i in 1:n_dat) {
+    pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
+    pred_mean_salinity[i] = exp(pred_mean_lsalinity[i])
+    
+    pred_lsalinity[i] = (mu[i] - alpha[bac_id[i]])/beta[bac_id[i]]
+    pred_salinity[i] = exp(pred_lsalinity[i])
+
+    pred_intens_lsalinity[i] = (intensity[lake_id[i], bac_id[i]] - alpha[bac_id[i]])/beta[bac_id[i]]
+    pred_intens_salinity[i] = exp(pred_intens_lsalinity[i])
   }
 }

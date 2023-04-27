@@ -7,13 +7,7 @@
 library(R2jags)
 library(dplyr)
 library(reshape2)
-library(mcmc)
-library(coda)
-library(lattice)
 library(R2WinBUGS)
-library(mcmcplots)
-library(bayesplot)
-library(tidyverse)
 
 
 load("raw data/dat_long.RData")
@@ -27,14 +21,17 @@ filein <- "BUGS/model_missing_lm_long.txt"
 
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta",
             "missing", "log_missing", "mu.x", "p.x", "log_salinity", 
-            "beta_s", "gamma")#,
-#  "pred_mean_lsalinity", #"pred_lsalinity")
-# "mu", "intens_pred")
+            "beta_s",
+            "pred_mean_lsalinity", "pred_mean_salinity",
+            "pred_intens_lsalinity", "pred_intens_salinity",
+            "pred_lsalinity", "pred_salinity")
 
 n.iter <- 20000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 n_dat <- nrow(dat_long)
+
+## define inits?
 
 
 ####################
@@ -48,24 +45,22 @@ missing_lake_dat <-
   mutate(log_salinity = NA,
          Lake_name = 10000) #1000 lake name same as for ex. 854
 
+n_missing_dat <- nrow(missing_lake_dat)
+n_missing_lake <- length(missing_lake_name)
+
 dat_total <-
   bind_rows(dat_long, missing_lake_dat) |> 
   arrange(Lake_name)
 
-n_missing_dat <- nrow(missing_lake_dat)
-n_missing_lake <- length(missing_lake_name)
-
-bac_names <- levels(dat_total$bacteria)
 lakeNames <- sort(unique(dat_total$Lake_name)) # previously called LakeIDs
 n_lakes <- length(lakeNames)
 
-sal_dat <- dat_intens[order(dat_intens$Lake_name), ]
-salinity_dat <- append(log(sal_dat$Wsalinity), NA)
+log_salinity <- dat_total |>
+  group_by(Lake_name) |>
+  arrange(Lake_name) |> 
+  summarise(log_salinity = first(log_salinity)) |> 
+  pull()
 
-MAT_miss <- dat_intens$MAT[dat_intens$Lake_name == missing_lake_name]
-MAT <- append(dat_intens$MAT, MAT_miss)
-
-#
 intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 
@@ -74,17 +69,16 @@ intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
-       n_bac = length(bac_names),
-       log_salinity = as.numeric(salinity_dat),
+       n_bac = nlevels(dat_total$bacteria),
+       log_salinity = log_salinity,
        lake_id = as.numeric(as.factor(dat_total$Lake_name)),
        intensity = intens_mat, 
-       #MAT = as.numeric(MAT),
-       n_dat = n_dat + n_missing_dat,
        n_obs = n_dat,
        n_miss = n_missing_dat,
+       n_dat = n_dat + n_missing_dat,
        n_lake_miss = n_missing_lake,
        n_lake = n_lakes,
-       n_lake_obs = n_lakes-n_missing_lake)
+       n_lake_obs = n_lakes - n_missing_lake)
 
 res_bugs <-
   jags(data = dataJags,
@@ -110,6 +104,7 @@ save(output, file = "output_data/BUGS_output_missing.RData")
 # plots
 
 library(ggplot2)
+library(bayesplot)
 
 mcmcplot(res_bugs)
 # plots <- traceplot(res_bugs)
@@ -123,9 +118,11 @@ mcmc_areas(x, pars = c("intens_pred[1071]",
                        "intens_pred[1073]",
                        "intens_pred[1076]"))
 
-##
+mcmc_areas(x, regex_pars = "pred_mean_lsalinity\\[107")
+mcmc_areas(x, regex_pars = "pred_mean_salinity\\[107") + xlim(0, 10)
 
-for (i in 1:dataJags$n_dat) {
-  x <- dataJags$log_salinity[dataJags$lake_id[i]] 
-  print(x)
-}
+mcmc_areas(x, regex_pars = "pred_lsalinity\\[107")
+mcmc_areas(x, regex_pars = "pred_salinity\\[107")
+
+mcmc_areas(x, regex_pars = "pred_intens_lsalinity\\[107")
+mcmc_areas(x, regex_pars = "pred_intens_salinity\\[107") + xlim(0,10)
