@@ -23,31 +23,8 @@ library(ggpubr)
 library(GGally)
 
 
-# dataset counts
-# including 0s
-dat <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
-                check.names = FALSE, header = TRUE)
+load(file = "raw data/dat_long.RData")
 
-dat <- dat[dat$Wsalinity != 0, ]
-
-dat$log_salinity <- log(dat$Wsalinity)
-dat$log_WpH <- scale(log(dat$WpH), scale = FALSE)
-dat$log_lakeArea <- log(dat$`Lake area`)
-dat$MAT <- scale(dat$MAT, scale = FALSE)
-
-# dat_long <- dat[, -c(8,10,14)]  # remove IIIc', IIa' and IIc'
-
-# melt data
-dat_long <- dat %>%
-  pivot_longer(IIIa:Ic, names_to = "bacteria", values_to = "intensity") |> 
-  mutate(log_intensity = log(intensity),
-         bacteria = as.factor(bacteria)) |> 
-  filter(intensity != 0) |>              # remove with signal intensity = 0
-  select("LakeID", "bacteria", "log_salinity", "log_intensity")
-
-#dat.3 <- dat_long[, c("LakeName", "bacteria", "log_salinity", "log_intensity")] #for Section 3
-
-save(dat_long, file = "raw data/dat_long.RData")
 
 ############################
 # basic plots
@@ -76,7 +53,9 @@ names_bacteria <- levels(dat_long$bacteria)
 m_no_pooling <- list()
 
 for (i in names_bacteria) {
-  m_no_pooling[[i]] <- lm(log_intensity ~ log_salinity, filter(dat_long, bacteria == i)) 
+  m_no_pooling[[i]] <-
+    lm(log_intensity ~ log_salinity,
+       filter(dat_long, bacteria == i)) 
 }
 
 df_no_pooling <- tibble(
@@ -106,12 +85,17 @@ df_models.1 <- bind_rows(df_pooled, df_no_pooling)
 
 ggplot(df_models.1) +
   facet_wrap("bacteria") +
-  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
-  geom_abline(aes(intercept = Intercept, slope = Slope_Salinity, color = Model), size = 0.75) +
+  geom_point(data = dat_long,
+             aes(x = log_salinity, y = log_intensity),
+             inherit.aes = FALSE) +
+  geom_abline(aes(intercept = Intercept,
+                  slope = Slope_Salinity, color = Model),
+              size = 0.75) +
   theme_bw()
 
 
-mod.1 <- lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat_long)
+mod.1 <-
+  lmer(log_intensity ~ 1 + log_salinity + (1 + log_salinity | bacteria), dat_long)
 mod.1
 
 df_partial_pooling <- coef(mod.1)[["bacteria"]] %>% 
@@ -126,8 +110,12 @@ df_models.2 <- bind_rows(df_models.1, df_partial_pooling)
 
 ggplot(df_models.2) +
   facet_wrap("bacteria") +
-  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
-  geom_abline(aes(intercept = Intercept, slope = Slope_Salinity, color = Model), size = 0.75) +
+  geom_point(data = dat_long,
+             aes(x = log_salinity, y = log_intensity),
+             inherit.aes = FALSE) +
+  geom_abline(aes(intercept = Intercept,
+                  slope = Slope_Salinity, color = Model),
+              size = 0.75) +
   theme_bw()
 
 ## Bayesian no pool, pool, partial pool####################
@@ -230,8 +218,12 @@ df_samples
 
 ggplot(df_samples) +
   facet_wrap("bacteria") +
-  geom_point(data = dat_long, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
-  geom_abline(aes(intercept = Intercept, slope = log_salinity), size = 0.75,
+  geom_point(data = dat_long,
+             aes(x = log_salinity, y = log_intensity),
+             inherit.aes = FALSE) +
+  geom_abline(aes(intercept = Intercept,
+                  slope = log_salinity),
+              size = 0.75,
               color = "#3366FF", 
               alpha = .1)
 

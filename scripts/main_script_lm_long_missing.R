@@ -1,8 +1,9 @@
 
 # run BUGS model script
+# for linear regression missing data model
 # and forest plots
 
-# library ####
+
 library(R2jags)
 library(dplyr)
 library(reshape2)
@@ -14,24 +15,21 @@ library(mcmcplots)
 library(bayesplot)
 library(tidyverse)
 
+
 # load data set ####
 load("raw data/dat_long.RData")
-names(dat_long)[names(dat_long) == "LakeID"] <- "Lake_name"
+load("raw data/intens_mat.RData")
 
-dat_intens <- read.csv(here::here("raw data", "data_signal_intensity.csv"),
-                check.names = FALSE, header = TRUE)
-dat_intens <- dat_intens[,c(1, 3:37)]
-dat_intens <- dat_intens[dat_intens$Wsalinity != 0, ]
-names(dat_intens)[names(dat_intens) == "LakeID"] <- "Lake_name"
 
 # jags set-up ####
 
 filein <- "BUGS/model_missing_lm_long.txt"
-params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta",
-            "sd_beta", "missing", "log_missing", "mu.x", "p.x", "log_salinity", 
+
+params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta",
+            "missing", "log_missing", "mu.x", "p.x", "log_salinity", 
             "beta_s", "gamma")#,
-            #  "pred_mean_lsalinity", #"pred_lsalinity")
-            # "mu", "intens_pred")
+#  "pred_mean_lsalinity", #"pred_lsalinity")
+# "mu", "intens_pred")
 
 n.iter <- 20000
 n.burnin <- 1000
@@ -51,7 +49,7 @@ dat_total <-
 
 n_missing_dat <- nrow(missing_lake_dat)
 n_missing_lake <- length(missing_lake_name)
-  
+
 bac_names <- levels(dat_total$bacteria)
 lakeNames <- sort(unique(dat_total$Lake_name)) #LakeIDs
 n_lakes <- length(lakeNames)
@@ -62,21 +60,12 @@ salinity_dat <- append(log(sal_dat$Wsalinity),'NA')
 MAT_miss <- dat_intens$MAT[dat_intens$Lake_name == missing_lake_name]
 MAT <- append(dat_intens$MAT, MAT_miss)
 
-intens_mat <- dat_intens %>%
-  select("Lake_name", "IIIa":"Ic") %>% 
-  mutate(across(everything(), ~replace(., . == 0, NA)),
-         across(
-           .cols = "IIIa":"Ic",
-           .fn = log)) |> 
-  arrange(Lake_name) |> 
-  select(all_of(bac_names))
-
 intens_mat[n_lakes, ] <- intens_mat[which(lakeNames == missing_lake_name), ]
 
 dataJags <-
   list(bac_id = as.numeric(as.factor(dat_total$bacteria)),
        n_bac = length(bac_names),
-       log_salinity = as.numeric(salinity_dat), #dat_total$log_salinity
+       log_salinity = as.numeric(salinity_dat),
        lake_id = as.numeric(as.factor(dat_total$Lake_name)),
        intensity = intens_mat, 
        #MAT = as.numeric(MAT),
@@ -114,7 +103,10 @@ mcmc_areas(x, regex_pars = "^alpha") #pars = c("alpha[1]","alpha[2]","alpha[3]")
 mcmc_areas(x, regex_pars = "^beta") #pars = c("beta[1]","beta[2]","beta[3]"))
 mcmc_areas(x, pars = c("missing")) #+ xlim(0, 50)
 mcmc_areas(x, regex_pars = "intens_pred\\[1]") #+ xlim(0, 50)
-mcmc_areas(x, pars = c("intens_pred[1071]","intens_pred[1072]","intens_pred[1073]","intens_pred[1076]"))
+mcmc_areas(x, pars = c("intens_pred[1071]",
+                       "intens_pred[1072]",
+                       "intens_pred[1073]",
+                       "intens_pred[1076]"))
 
 save(output, file = "output_data/BUGS_output_missing.RData")
 
