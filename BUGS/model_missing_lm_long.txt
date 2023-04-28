@@ -3,7 +3,7 @@
 model {
 
   for (i in 1:n_dat) {
-    intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau)
+    intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau) #tau[i]
     mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]] 
   }
 
@@ -23,12 +23,12 @@ model {
  
   for (i in 1:n_bac) {  
     alpha[i] ~ dnorm(mu_alpha, tau_alpha)
-    beta[i] ~ dnorm(mu_beta, tau_beta)#T(0,)
+    beta[i] ~ dnorm(mu_beta, tau_beta)T(0,)
   }
 
   # random effects
-  mu_alpha ~ dunif(0, 500) 
-  mu_beta ~ dunif(0.1, 10)
+  mu_alpha ~ dunif(0, 20)
+  mu_beta ~ dunif(0.1, 2)
   
   tau_alpha = 1/pow(sd_alpha, 2)
   sd_alpha ~ dunif(0, 10)
@@ -40,7 +40,9 @@ model {
   sd.x ~ dunif(0.0001, 1)
 
   ## generated quantities
-
+  
+  m.missing = exp(mu.x + 0.5*(sd.x^2))
+  
   for (j in 1:n_lake_miss) { 
     log_missing[j] = log_salinity[n_lake_obs + j] 
     missing[j] = exp(log_missing)  

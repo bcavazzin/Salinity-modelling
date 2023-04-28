@@ -33,7 +33,6 @@ n_dat <- nrow(dat_long)
 
 ## define inits?
 
-
 ####################
 # prep missing data
 
