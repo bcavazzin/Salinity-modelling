@@ -25,7 +25,16 @@ n.iter <- 20000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 
-## define inits?
+##TODO: what values?
+jags.inits <- function() {
+  list("mu.x" = rnorm(1),
+       "sd.x" = runif(1),
+       "sd_alpha" = rnorm(1),
+       "sd_beta" = runif(1),
+       "mu_alpha" = runif(1),
+       "mu_beta" = runif(1),
+       "sd.tau" = rnorm(1))
+  }
 
 ##############
 # dummy data
@@ -66,7 +75,7 @@ dataJags <-
 
 res_bugs <-
   jags(data = dataJags,
-       inits = NULL,
+       inits = jags.inits,
        parameters.to.save = params,
        model.file = filein,
        n.chains = 1,
