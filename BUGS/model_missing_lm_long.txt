@@ -9,7 +9,7 @@ model {
 
   # missingness model
   for (j in 1:n_lake) { 
-    log_salinity[j] ~ dnorm(mu.x, p.x)T(-2.5, 7)
+    log_salinity[j] ~ dnorm(mu.x, p.x)#T(-2.5, 7)
     
     # # regression
     #log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5, 7)
@@ -23,7 +23,7 @@ model {
  
   for (i in 1:n_bac) {  
     alpha[i] ~ dnorm(mu_alpha, tau_alpha)
-    beta[i] ~ dnorm(mu_beta, tau_beta)T(0,)
+    beta[i] ~ dnorm(mu_beta, tau_beta)#T(0,)
   }
 
   # random effects
@@ -35,12 +35,9 @@ model {
   tau_beta = 1/pow(sd_beta, 2)
   sd_beta ~ dunif(0, 10)
 
-  mu.x ~ dunif(-2,5)
+  mu.x ~ dunif(-10, 10)
   p.x = 1/pow(sd.x, 2)
-  #beta_s ~ dnorm(0, 0.001)
-  #beta_p ~ dnorm(0, 0.001)
-
-  sd.x ~ dunif(0, 0.01)
+  sd.x ~ dunif(0.0001, 1)
 
   ## generated quantities
 
