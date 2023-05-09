@@ -5,6 +5,9 @@ model {
   for (i in 1:n_dat) {
     intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau) #tau[i]
     mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]] 
+    
+    # for pooled 
+     mu[i] = alpha - beta[log_salinity[lake_id[i]] 
   }
 
   # missingness model

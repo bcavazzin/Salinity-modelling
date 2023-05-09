@@ -40,43 +40,38 @@ jags.inits <- function() {
   }
 
 ##############
-# dummy data
+# dummy data 20 lakes, 5 bacteria per lake
 
-n_sample <- 5
+n_lakes <- 20
+n_entires <- 100
+n_bacteria <- 5
 alpha0 <- 10
 beta0 <- -1
 
-dat_l1 <- 
-  data.frame(Lake_name = "1",
-             bacteria = as.factor(LETTERS[1:n_sample])) |> 
-  mutate(log_salinity = rnorm(1, 0, 1),
-         log_intensity = rnorm(n_sample, alpha0 + beta0*log_salinity, 1))
+LakeName <- rep(1:20, each = 5)
+bacteria <- rep(as.factor(LETTERS[1:n_bacteria]), 20)
 
-dat_l2 <- 
-  data.frame(Lake_name = "2",
-             bacteria = as.factor(LETTERS[1:n_sample])) |> 
-  mutate(log_salinity = rnorm(1, 0, 1),
-         log_intensity = rnorm(n_sample, alpha0 + beta0*log_salinity, 1))
+dummy <- tibble(LakeName, bacteria) %>%
+         mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = 5),
+                log_intensity = rnorm(n_entires, alpha0 + beta0*log_salinity, 1))
 
-dat_l3 <- 
-  data.frame(Lake_name = "3",
-             bacteria = as.factor(LETTERS[1:n_sample])) |> 
-  mutate(log_salinity = rnorm(1, 0, 1),
-         log_intensity = rnorm(n_sample, alpha0 + beta0*log_salinity, 1))
 
-dat_total <- rbind(dat_l1, dat_l2, dat_l3)
-
-intens_mat <- dat_total %>%
+intens_mat <- dummy %>%
   pivot_wider(names_from = bacteria, values_from = log_intensity)
 intens_mat <- intens_mat[,-c(1,2)]
 
 ################
 # missing data
 
-dat_total <- rbind(dat_total,
-                   c("4", "A", NA_real_, 11.71))
+dat_total <- rbind(dummy,
+                   c("21", "A", NA_real_, 11.71),
+                   c("21", "B", NA_real_, 9.54),
+                   c("21", "C", NA_real_, 8.69),
+                   c("21", "D", NA_real_, 11.89),
+                   c("21", "E", NA_real_, 7.99))
+
 intens_mat <- rbind(intens_mat,
-                    c(11.71, NA, NA, NA, NA))
+                    c(11.71, 9.54, 8.69, 11.89, 7.99))
 
 dat_total$log_salinity = as.numeric(dat_total$log_salinity)
 dat_total$log_intensity = as.numeric(dat_total$log_intensity)
