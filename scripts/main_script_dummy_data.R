@@ -15,7 +15,7 @@ library(tibble)
 #################
 # jags set-up
 
-filein <- "BUGS/model_missing_lm_long.txt"
+filein <- "BUGS/model_missing_dummy.txt"
 
 params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta",
             "missing", "log_missing", "m.missing",
@@ -37,7 +37,7 @@ jags.inits <- function() {
        "mu_alpha" = runif(1),
        "mu_beta" = runif(1),
        "sd.tau" = rnorm(1))
-  }
+}
 
 ##############
 # dummy data 20 lakes, 5 bacteria per lake
@@ -52,29 +52,36 @@ LakeName <- rep(1:20, each = 5)
 bacteria <- rep(as.factor(LETTERS[1:n_bacteria]), 20)
 
 dummy <- tibble(LakeName, bacteria) %>%
-         mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = 5),
-                log_intensity = rnorm(n_entires, alpha0 + beta0*log_salinity, 1))
+  mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = 5))|>
+  group_by(bacteria) |>
+  mutate(alpha_bac = rnorm(1, alpha0, 1), 
+         beta_bac = rnorm(1, beta0, 1)) %>% 
+  ungroup() %>% 
+  mutate(log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1))
 
-
-intens_mat <- dummy %>%
-  pivot_wider(names_from = bacteria, values_from = log_intensity)
-intens_mat <- intens_mat[,-c(1,2)]
-
-################
-# missing data
-
-dat_total <- rbind(dummy,
-                   c("21", "A", NA_real_, 11.71),
-                   c("21", "B", NA_real_, 9.54),
-                   c("21", "C", NA_real_, 8.69),
-                   c("21", "D", NA_real_, 11.89),
-                   c("21", "E", NA_real_, 7.99))
-
-intens_mat <- rbind(intens_mat,
-                    c(11.71, 9.54, 8.69, 11.89, 7.99))
+# Long dataset with last lake missing salinity
+dat_total <- select(dummy, -alpha_bac, -beta_bac) |>
+    mutate(log_salinity = ifelse(LakeName == 20, NA, log_salinity))
 
 dat_total$log_salinity = as.numeric(dat_total$log_salinity)
 dat_total$log_intensity = as.numeric(dat_total$log_intensity)
+
+intens_mat <- dat_total %>%
+  pivot_wider(names_from = bacteria, values_from = log_intensity) |>
+  select(-log_salinity, -LakeName)
+  # missing salinity for lake 20 
+  # mutate(log_salinity = ifelse(LakeName == 20, NA, LakeName))
+
+salinity_dat <- dat_total %>%
+  pivot_wider(names_from = bacteria, values_from = log_intensity) |>
+  select(log_salinity)
+
+missing_lake <- dat_total[dat_total$LakeName == "20", ]
+observed_dat <- dat_total[dat_total$LakeName < 20, ] 
+
+missing_lake_name <- 20
+n_missing_lake <- length(missing_lake_name)
+lakeNames <- sort(unique(dat_total$LakeName))
 
 #############
 # run model
@@ -82,13 +89,16 @@ dat_total$log_intensity = as.numeric(dat_total$log_intensity)
 dataJags <-
   list(bac_id = as.numeric(dat_total$bacteria),
        n_bac = nlevels(dat_total$bacteria),
-       log_salinity = dat_total$log_salinity,
-       lake_id = as.numeric(as.factor(dat_total$Lake_name)),
+       log_salinity = salinity_dat$log_salinity,
+       lake_id = as.numeric(as.factor(dat_total$LakeName)),
        intensity = intens_mat, 
+       #n_obs = nrow(observed_dat),
+       #n_miss = nrow(missing_lake),
        n_dat = nrow(dat_total),
-       n_lake_miss = 1,
-       n_lake_obs = 1,
-       n_lake = 2)
+       n_lake_miss = n_missing_lake,
+       n_lake = length(lakeNames), 
+       n_lake_obs = n_lakes - n_missing_lake
+       )
 
 res_bugs <-
   jags(data = dataJags,
