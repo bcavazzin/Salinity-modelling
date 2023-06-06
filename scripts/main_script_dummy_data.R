@@ -43,36 +43,39 @@ jags.inits <- function() {
 # dummy data 20 lakes, 5 bacteria per lake
 
 n_lakes <- 20
-n_entires <- 100
 n_bacteria <- 5
+
+# total combinations
+n_entires <- n_lakes*n_bacteria
+
+# pooled regression coefficients
 alpha0 <- 10
 beta0 <- -1
 
-LakeName <- rep(1:20, each = 5)
-bacteria <- rep(as.factor(LETTERS[1:n_bacteria]), 20)
-
-dummy <- tibble(LakeName, bacteria) %>%
+fake_data <- tibble(
+  LakeName = rep(1:20, each = 5),
+  bacteria = rep(as.factor(LETTERS[1:n_bacteria]), 20)) |> 
   mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = 5))|>
   group_by(bacteria) |>
   mutate(alpha_bac = rnorm(1, alpha0, 1), 
-         beta_bac = rnorm(1, beta0, 1)) %>% 
-  ungroup() %>% 
+         beta_bac = msm::rtnorm(1, mean = beta0, sd = 1, upper = 0)) |> 
+  ungroup() |> 
   mutate(log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1))
 
 # Long dataset with last lake missing salinity
-dat_total <- select(dummy, -alpha_bac, -beta_bac) |>
+dat_total <- select(fake_data, -alpha_bac, -beta_bac) |>
     mutate(log_salinity = ifelse(LakeName == 20, NA, log_salinity))
 
 dat_total$log_salinity = as.numeric(dat_total$log_salinity)
 dat_total$log_intensity = as.numeric(dat_total$log_intensity)
 
-intens_mat <- dat_total %>%
+intens_mat <- dat_total |> 
   pivot_wider(names_from = bacteria, values_from = log_intensity) |>
   select(-log_salinity, -LakeName)
   # missing salinity for lake 20 
   # mutate(log_salinity = ifelse(LakeName == 20, NA, LakeName))
 
-salinity_dat <- dat_total %>%
+salinity_dat <- dat_total |> 
   pivot_wider(names_from = bacteria, values_from = log_intensity) |>
   select(log_salinity)
 
@@ -97,8 +100,7 @@ dataJags <-
        n_dat = nrow(dat_total),
        n_lake_miss = n_missing_lake,
        n_lake = length(lakeNames), 
-       n_lake_obs = n_lakes - n_missing_lake
-       )
+       n_lake_obs = n_lakes - n_missing_lake)
 
 res_bugs <-
   jags(data = dataJags,
