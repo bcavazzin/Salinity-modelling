@@ -11,7 +11,6 @@ library(R2WinBUGS)
 library(tidyr)
 library(tibble)
 
-
 #################
 # jags set-up
 
@@ -24,7 +23,7 @@ params <- c("alpha", "beta", "mu_alpha", "sd_alpha", "mu_beta", "sd_beta",
             "pred_intens_lsalinity", "pred_intens_salinity",
             "pred_lsalinity", "pred_salinity")
 
-n.iter <- 20000
+n.iter <- 90000
 n.burnin <- 1000
 n.thin <- floor((n.iter - n.burnin)/500)
 
@@ -112,7 +111,7 @@ res_bugs <-
        inits = NULL,
        parameters.to.save = params,
        model.file = filein,
-       n.chains = 1,
+       n.chains = 4,
        n.iter,
        n.burnin,
        n.thin,
@@ -133,9 +132,13 @@ save(output, file = "output_data/BUGS_output_missing_dummy.RData")
 library(ggplot2)
 library(bayesplot)
 
+#density plot missing salinity 
+mcmc_areas(x, pars = c("missing"), prob = 0.95) +
+  xlim(0,5) +
+  geom_vline(xintercept = exp(-0.12158111), color = "red", size=1)
+
 mcmc_areas(x, regex_pars = "^alpha")
 mcmc_areas(x, regex_pars = "^beta")
-mcmc_areas(x, pars = c("missing"))
 mcmc_areas(x, regex_pars = "intens_pred\\[1]")
 
 mcmc_areas(x, regex_pars = "pred_mean_lsalinity")
@@ -164,6 +167,21 @@ beta.poster <- x.dat %>%
   pivot_longer(everything(),
                names_to = "bacteria.beta",
                values_to = "Beta")
+
+mu_alpha.poster <- x.dat %>%
+  as.data.frame()%>%
+  select(starts_with("mu_alpha")) %>%
+  pivot_longer(everything(),
+               names_to = "bacteria.alpha",
+               values_to = "mu_alpha")
+
+mu_beta.poster <- x.dat %>%
+  as.data.frame()%>%
+  select(starts_with("mu_beta")) %>%
+  pivot_longer(everything(),
+               names_to = "bacteria.beta",
+               values_to = "mu_beta")
+
 # merge the two
 dat.post <- cbind(alpha.poster, beta.poster)
 
@@ -200,13 +218,17 @@ xx_samples
 
 #plot_data <- dat_total[-16,]
 
-ggplot(xx_samples) +
+p1 <- ggplot(xx_samples) +
   facet_wrap("bacteria") +
   geom_point(data = dat_total, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) +
-  geom_abline(aes(intercept = 10, slope = -1), col="red") +
   geom_abline(aes(intercept = alpha, slope = -beta), size = 0.75, #-beta because the BUGS code is positive relationship 
               color = "#3366FF", 
               alpha = .1) +
   xlim(-10,10)
 
-
+p2 <- ggplot() +
+  geom_abline(aes(intercept = mu_alpha.poster$mu_alpha, slope = -mu_beta.poster$mu_beta), col="yellow") +
+  geom_abline(aes(intercept = alpha0, slope = beta0), col="red") +
+  geom_point(data = dat_total, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) 
+  
+grid.arrange(p1, p2, ncol = 2)
