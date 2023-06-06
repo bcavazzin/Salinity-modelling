@@ -57,14 +57,16 @@ fake_data <-
     LakeName = rep(1:n_lakes, each = n_bac),
     bacteria = rep(as.factor(bac_labels), n_lakes)) |> 
   mutate(
-    log_salinity = rep(rnorm(n_lakes, 0, 1), each = n_bac))|>
+    log_salinity = rep(rnorm(n_lakes, 0, 1), each = n_bac))|> #change the sd (1)
   group_by(bacteria) |>
   mutate(
     alpha_bac = rnorm(1, alpha0, 1), 
     beta_bac = msm::rtnorm(1, mean = beta0, sd = 1, upper = 0)) |> 
   ungroup() |> 
   mutate(
-    log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1))
+    log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1)) #change the sd (1)
+
+fake_data <- fake_data[-sample(1:nrow(fake_data), 10), ] #increase the row to remove 
 
 # Long dataset with last lake missing salinity
 dat_total <-
@@ -132,10 +134,14 @@ save(output, file = "output_data/BUGS_output_missing_dummy.RData")
 library(ggplot2)
 library(bayesplot)
 
+#trace plot 
+mcmcplots::traplot(as.mcmc.rjags(res_bugs), parms = "missing")
+
 #density plot missing salinity 
-mcmc_areas(x, pars = c("missing"), prob = 0.95) +
+p0 <- mcmc_areas(x, pars = c("missing"), prob = 0.95) +
   xlim(0,5) +
-  geom_vline(xintercept = exp(-0.12158111), color = "red", size=1)
+  geom_vline(xintercept = exp(0.3911465), color = "red", size=1)
+p0
 
 mcmc_areas(x, regex_pars = "^alpha")
 mcmc_areas(x, regex_pars = "^beta")
@@ -231,4 +237,4 @@ p2 <- ggplot() +
   geom_abline(aes(intercept = alpha0, slope = beta0), col="red") +
   geom_point(data = dat_total, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) 
   
-grid.arrange(p1, p2, ncol = 2)
+grid.arrange(p1, p2, ncol = 3)
