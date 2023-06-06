@@ -43,19 +43,20 @@ jags.inits <- function() {
 # dummy data 20 lakes, 5 bacteria per lake
 
 n_lakes <- 20
-n_bacteria <- 5
+n_bac <- 5
+bac_labels <- LETTERS[1:n_bac]
 
 # total combinations
-n_entires <- n_lakes*n_bacteria
+n_entires <- n_lakes*n_bac
 
 # pooled regression coefficients
 alpha0 <- 10
 beta0 <- -1
 
 fake_data <- tibble(
-  LakeName = rep(1:20, each = 5),
-  bacteria = rep(as.factor(LETTERS[1:n_bacteria]), 20)) |> 
-  mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = 5))|>
+  LakeName = rep(1:n_lakes, each = n_bac),
+  bacteria = rep(as.factor(bac_labels), n_lakes)) |> 
+  mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = n_bac))|>
   group_by(bacteria) |>
   mutate(alpha_bac = rnorm(1, alpha0, 1), 
          beta_bac = msm::rtnorm(1, mean = beta0, sd = 1, upper = 0)) |> 
