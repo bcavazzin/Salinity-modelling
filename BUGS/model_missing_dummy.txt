@@ -4,19 +4,12 @@ model {
 
   for (i in 1:n_dat) {
     intensity[lake_id[i], bac_id[i]] ~ dnorm(mu[i], tau) #tau[i]
-    mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]] 
-    
-    # for pooled 
-     #mu[i] = alpha - beta[log_salinity[lake_id[i]] 
+    mu[i] = alpha[bac_id[i]] - beta[bac_id[i]]*log_salinity[lake_id[i]]
   }
 
   # missingness model
   for (j in 1:n_lake) { 
     log_salinity[j] ~ dnorm(mu.x, p.x)#T(-2.5, 7)
-    
-    # # regression
-    #log_salinity[j] ~ dnorm(mu_s[j], p.x)T(-2.5, 7)
-    #mu_s[j] = beta_s*MAT[j]
   }
   
   ## priors
@@ -54,13 +47,16 @@ model {
   # posterior_prediction
   
   for (i in 1:n_dat) {
+    # pooled mean prediction
     pred_mean_lsalinity[i] = (mu[i] - mu_alpha)/mu_beta
     pred_mean_salinity[i] = exp(pred_mean_lsalinity[i])
-    
+   
+    # bacteria-specific mean prediction
     pred_lsalinity[i] = (mu[i] - alpha[bac_id[i]])/beta[bac_id[i]]
     pred_salinity[i] = exp(pred_lsalinity[i])
 
+    # bacteria-specific observed data prediction
     pred_intens_lsalinity[i] = (intensity[lake_id[i], bac_id[i]] - alpha[bac_id[i]])/beta[bac_id[i]]
-    pred_intens_salinity[i] = exp(pred_intens_lsalinity[i])
+    #pred_intens_salinity[i] = exp(pred_intens_lsalinity[i])
   }
 }

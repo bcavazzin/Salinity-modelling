@@ -53,25 +53,31 @@ n_entires <- n_lakes*n_bac
 alpha0 <- 10
 beta0 <- -1
 
-fake_data <- tibble(
-  LakeName = rep(1:n_lakes, each = n_bac),
-  bacteria = rep(as.factor(bac_labels), n_lakes)) |> 
-  mutate(log_salinity = rep(rnorm(n_lakes, 0, 1), each = n_bac))|>
+fake_data <-
+  tibble(
+    LakeName = rep(1:n_lakes, each = n_bac),
+    bacteria = rep(as.factor(bac_labels), n_lakes)) |> 
+  mutate(
+    log_salinity = rep(rnorm(n_lakes, 0, 1), each = n_bac))|>
   group_by(bacteria) |>
-  mutate(alpha_bac = rnorm(1, alpha0, 1), 
-         beta_bac = msm::rtnorm(1, mean = beta0, sd = 1, upper = 0)) |> 
+  mutate(
+    alpha_bac = rnorm(1, alpha0, 1), 
+    beta_bac = msm::rtnorm(1, mean = beta0, sd = 1, upper = 0)) |> 
   ungroup() |> 
-  mutate(log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1))
+  mutate(
+    log_intensity = rnorm(n_entires, alpha_bac + beta_bac*log_salinity, 1))
 
 # Long dataset with last lake missing salinity
-dat_total <- select(fake_data, -alpha_bac, -beta_bac) |>
-    mutate(log_salinity = ifelse(LakeName == 20, NA, log_salinity))
-
-dat_total$log_salinity = as.numeric(dat_total$log_salinity)
-dat_total$log_intensity = as.numeric(dat_total$log_intensity)
+dat_total <-
+  select(fake_data, -alpha_bac, -beta_bac) |>
+  mutate(log_salinity = ifelse(LakeName == 20,
+                               yes = NA, no = log_salinity),
+         log_salinity = as.numeric(log_salinity),
+         log_intensity = as.numeric(log_intensity))
 
 intens_mat <- dat_total |> 
-  pivot_wider(names_from = bacteria, values_from = log_intensity) |>
+  pivot_wider(names_from = bacteria,
+              values_from = log_intensity) |>
   select(-log_salinity, -LakeName)
   # missing salinity for lake 20 
   # mutate(log_salinity = ifelse(LakeName == 20, NA, LakeName))
@@ -80,12 +86,12 @@ salinity_dat <- dat_total |>
   pivot_wider(names_from = bacteria, values_from = log_intensity) |>
   select(log_salinity)
 
-missing_lake <- dat_total[dat_total$LakeName == "20", ]
-observed_dat <- dat_total[dat_total$LakeName < 20, ] 
-
 missing_lake_name <- 20
+
+missing_dat <- dat_total[dat_total$LakeName == missing_lake_name, ]
+observed_dat <- dat_total[dat_total$LakeName != missing_lake_name, ] 
+
 n_missing_lake <- length(missing_lake_name)
-lakeNames <- sort(unique(dat_total$LakeName))
 
 #############
 # run model
@@ -96,11 +102,9 @@ dataJags <-
        log_salinity = salinity_dat$log_salinity,
        lake_id = as.numeric(as.factor(dat_total$LakeName)),
        intensity = intens_mat, 
-       #n_obs = nrow(observed_dat),
-       #n_miss = nrow(missing_lake),
        n_dat = nrow(dat_total),
        n_lake_miss = n_missing_lake,
-       n_lake = length(lakeNames), 
+       n_lake = n_lakes, 
        n_lake_obs = n_lakes - n_missing_lake)
 
 res_bugs <-
