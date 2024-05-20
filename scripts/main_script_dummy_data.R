@@ -236,5 +236,6 @@ p2 <- ggplot() +
   geom_abline(aes(intercept = mu_alpha.poster$mu_alpha, slope = -mu_beta.poster$mu_beta), col="yellow") +
   geom_abline(aes(intercept = alpha0, slope = beta0), col="red") +
   geom_point(data = dat_total, aes(x = log_salinity, y = log_intensity), inherit.aes = FALSE) 
-  
-grid.arrange(p1, p2, ncol = 3)
+
+library(ggpubr)  
+ggarrange(p1, p2)
